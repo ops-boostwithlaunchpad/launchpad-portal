@@ -42,8 +42,14 @@ const navSections: NavSection[] = [
   {
     label: "Operations",
     items: [
-      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend"] },
-      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "backend"] },
+      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend", "employee"] },
+      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "backend", "employee"] },
+    ],
+  },
+  {
+    label: "Management",
+    items: [
+      { name: "Employees", href: "/dashboard/employees", icon: Users, roles: ["admin"] },
     ],
   },
   {
@@ -59,6 +65,7 @@ const roleBadgeColors: Record<Role, string> = {
   sales: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
   backend: "bg-amber-500/15 text-amber-400 border-amber-500/25",
   client: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
+  employee: "bg-pink-500/15 text-pink-400 border-pink-500/25",
 };
 
 export function Sidebar() {

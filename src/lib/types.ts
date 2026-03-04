@@ -1,4 +1,23 @@
-export type Role = "admin" | "sales" | "backend" | "client";
+export type Role = "admin" | "sales" | "backend" | "client" | "employee";
+
+export type Department =
+  | "Local SEO"
+  | "AI SEO"
+  | "Local Service Ads"
+  | "Google Ads"
+  | "Meta Ads"
+  | "Automation"
+  | "Developer";
+
+export const DEPARTMENTS: Department[] = [
+  "Local SEO",
+  "AI SEO",
+  "Local Service Ads",
+  "Google Ads",
+  "Meta Ads",
+  "Automation",
+  "Developer",
+];
 
 export interface User {
   id: number;

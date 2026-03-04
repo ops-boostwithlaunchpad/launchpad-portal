@@ -15,19 +15,21 @@ export interface AuthUser {
   role: Role;
 }
 
-// Hardcoded users — replace with DB lookup later
-const USERS: (AuthUser & { password: string })[] = [
-  { id: 1, name: "Admin User", email: "admin@gmail.com", role: "admin", password: "123" },
-  { id: 2, name: "Sales User", email: "sales@gmail.com", role: "sales", password: "123" },
-  { id: 3, name: "Backend User", email: "backend@gmail.com", role: "backend", password: "123" },
-  { id: 4, name: "Client User", email: "client@gmail.com", role: "client", password: "123" },
-];
+// Only one hardcoded admin user
+const ADMIN_USER: AuthUser & { password: string } = {
+  id: 0,
+  name: "Admin",
+  email: "admin@launchpadboost.com",
+  role: "admin",
+  password: "launchpad",
+};
 
-export function findUser(email: string, password: string): AuthUser | null {
-  const user = USERS.find((u) => u.email === email && u.password === password);
-  if (!user) return null;
-  const { password: _, ...authUser } = user;
-  return authUser;
+export function findAdmin(email: string, password: string): AuthUser | null {
+  if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
+    const { password: _, ...authUser } = ADMIN_USER;
+    return authUser;
+  }
+  return null;
 }
 
 export async function createToken(user: AuthUser): Promise<string> {
@@ -67,10 +69,12 @@ export function getDefaultRoute(role: Role): string {
       return "/dashboard/sales/master";
     case "backend":
       return "/dashboard/backend";
+    case "employee":
+      return "/dashboard/backend";
     case "client":
       return "/dashboard/portal";
     default:
-      return "/dashboard/sales/master";
+      return "/dashboard/backend";
   }
 }
 
@@ -82,6 +86,8 @@ export function getAllowedRoutes(role: Role): string[] {
     case "sales":
       return ["/dashboard/sales", "/dashboard/clients"];
     case "backend":
+      return ["/dashboard/backend", "/dashboard/clients"];
+    case "employee":
       return ["/dashboard/backend", "/dashboard/clients"];
     case "client":
       return ["/dashboard/portal"];

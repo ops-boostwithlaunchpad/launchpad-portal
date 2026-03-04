@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findUser, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
+import { findAdmin, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
-import { User } from "@/entity/User";
+import { Employee } from "@/entity/Employee";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -12,20 +12,25 @@ export async function POST(request: NextRequest) {
 
   let user: AuthUser | null = null;
 
-  // Try DB first
-  try {
-    const db = await getDB();
-    const dbUser = await db.getRepository(User).findOneBy({ email });
-    if (dbUser && dbUser.password === password) {
-      user = { id: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role as AuthUser["role"] };
-    }
-  } catch {
-    // DB not available, fall through to hardcoded
-  }
+  // Check hardcoded admin first
+  user = findAdmin(email, password);
 
-  // Fallback to hardcoded users
+  // If not admin, check employees table
   if (!user) {
-    user = findUser(email, password);
+    try {
+      const db = await getDB();
+      const employee = await db.getRepository(Employee).findOneBy({ email });
+      if (employee && employee.password === password) {
+        user = {
+          id: employee.id,
+          name: employee.name,
+          email: employee.email,
+          role: "employee",
+        };
+      }
+    } catch {
+      // DB not available
+    }
   }
 
   if (!user) {

@@ -10,6 +10,7 @@ export enum UserRole {
   SALES = "sales",
   BACKEND = "backend",
   CLIENT = "client",
+  EMPLOYEE = "employee",
 }
 
 @Entity("lp_users")

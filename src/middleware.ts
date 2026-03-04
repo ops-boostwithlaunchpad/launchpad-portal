@@ -10,6 +10,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/dashboard"],
   sales: ["/dashboard/sales", "/dashboard/clients"],
   backend: ["/dashboard/backend", "/dashboard/clients"],
+  employee: ["/dashboard/backend", "/dashboard/clients"],
   client: ["/dashboard/portal"],
 };
 
@@ -17,6 +18,7 @@ const ROLE_DEFAULT: Record<string, string> = {
   admin: "/dashboard/sales/master",
   sales: "/dashboard/sales/master",
   backend: "/dashboard/backend",
+  employee: "/dashboard/backend",
   client: "/dashboard/portal",
 };
 

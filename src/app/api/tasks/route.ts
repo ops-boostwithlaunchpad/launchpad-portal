@@ -4,7 +4,7 @@ import { Task } from "@/entity/Task";
 import { requireRole } from "@/lib/apiAuth";
 
 export async function GET(request: NextRequest) {
-  const { error } = await requireRole("admin", "sales", "backend", "client");
+  const { error } = await requireRole("admin", "sales", "backend", "employee", "client");
   if (error) return error;
   try {
     const db = await getDB();
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin", "sales", "backend");
+  const { error } = await requireRole("admin", "sales", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { error } = await requireRole("admin", "backend");
+  const { error } = await requireRole("admin", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { error } = await requireRole("admin", "backend");
+  const { error } = await requireRole("admin", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
