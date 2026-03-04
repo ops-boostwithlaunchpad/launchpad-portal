@@ -19,9 +19,9 @@ export interface AuthUser {
 const ADMIN_USER: AuthUser & { password: string } = {
   id: 0,
   name: "Admin",
-  email: "admin@launchpadboost.com",
+  email: "admin@boostwithlaunchpad.com",
   role: "admin",
-  password: "launchpad",
+  password: "123",
 };
 
 export function findAdmin(email: string, password: string): AuthUser | null {
