@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 // --- Types ---
 
@@ -86,9 +86,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Fetch existing notifications on mount
   useEffect(() => {
     if (loading || !user) return;
+    const sb = getSupabase();
+    if (!sb) return;
 
     async function fetchNotifications() {
-      const { data } = await supabase
+      const { data } = await sb!
         .from("lp_notifications")
         .select("*")
         .eq("user_id", user!.id)
@@ -104,8 +106,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Subscribe to Supabase Realtime
   useEffect(() => {
     if (loading || !user) return;
+    const sb = getSupabase();
+    if (!sb) return;
 
-    const channel = supabase
+    const channel = sb
       .channel(`notifications-${user.id}`)
       .on(
         "postgres_changes",
@@ -124,7 +128,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      sb.removeChannel(channel);
       for (const timeout of toastTimeouts.current.values()) {
         clearTimeout(timeout);
       }
@@ -135,10 +139,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const markAsRead = useCallback(async (ids: number[]) => {
-    await supabase
-      .from("lp_notifications")
-      .update({ is_read: true })
-      .in("id", ids);
+    const sb = getSupabase();
+    if (sb) {
+      await sb
+        .from("lp_notifications")
+        .update({ is_read: true })
+        .in("id", ids);
+    }
 
     setNotifications((prev) =>
       prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n))

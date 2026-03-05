@@ -3,7 +3,7 @@ import { getDB } from "@/lib/db";
 import { Task } from "@/entity/Task";
 import { requireRole } from "@/lib/apiAuth";
 import { getCurrentUser } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireRole("admin", "sales", "backend", "employee", "client");
@@ -81,29 +81,32 @@ export async function PATCH(request: NextRequest) {
 
     const updated = await taskRepo.save(task);
 
-    // Create notifications via Supabase (triggers Realtime)
-    if (wasAssigned && assignedTo) {
-      await supabase.from("lp_notifications").insert({
-        user_id: assignedTo,
-        title: "Task Assigned",
-        message: `New task assigned: ${task.service} for ${task.client}`,
-        type: "task_assigned",
-        task_id: task.id,
-      });
-    }
+    // Create notifications via Supabase (triggers Realtime) — skip if Supabase not configured
+    const sb = getSupabase();
+    if (sb) {
+      if (wasAssigned && assignedTo) {
+        await sb.from("lp_notifications").insert({
+          user_id: assignedTo,
+          title: "Task Assigned",
+          message: `New task assigned: ${task.service} for ${task.client}`,
+          type: "task_assigned",
+          task_id: task.id,
+        });
+      }
 
-    if (statusChanged && (status === "In Progress" || status === "Done")) {
-      const currentUser = await getCurrentUser();
-      const userName = currentUser?.name || "An employee";
-      const action = status === "In Progress" ? "started" : "completed";
+      if (statusChanged && (status === "In Progress" || status === "Done")) {
+        const currentUser = await getCurrentUser();
+        const userName = currentUser?.name || "An employee";
+        const action = status === "In Progress" ? "started" : "completed";
 
-      await supabase.from("lp_notifications").insert({
-        user_id: 0,
-        title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
-        message: `${userName} ${action}: ${task.service} for ${task.client}`,
-        type: status === "In Progress" ? "task_started" : "task_completed",
-        task_id: task.id,
-      });
+        await sb.from("lp_notifications").insert({
+          user_id: 0,
+          title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+          message: `${userName} ${action}: ${task.service} for ${task.client}`,
+          type: status === "In Progress" ? "task_started" : "task_completed",
+          task_id: task.id,
+        });
+      }
     }
 
     return NextResponse.json(updated);
