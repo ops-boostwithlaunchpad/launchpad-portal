@@ -8,6 +8,7 @@ import { Badge, ServiceBadge, StatusBadge } from "@/components/Badge";
 import { Select } from "@/components/FormGroup";
 import { Client, Task } from "@/lib/types";
 import { SVC_DESC } from "@/lib/types";
+import { useAuth } from "@/lib/AuthContext";
 import {
   TrendingUp,
   Hash,
@@ -32,10 +33,13 @@ const updateTimes = [
 ];
 
 export default function CustomerPortalPage() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState(0);
+
+  const isClientRole = user?.role === "client";
 
   useEffect(() => {
     Promise.all([
@@ -45,14 +49,27 @@ export default function CustomerPortalPage() {
       .then(([clientsData, tasksData]) => {
         const c = Array.isArray(clientsData) ? clientsData : [];
         const t = Array.isArray(tasksData) ? tasksData : [];
-        setClients(c);
-        setAllTasks(t);
-        if (c.length > 0) {
-          setSelectedClientId(c[0].id);
+
+        if (isClientRole && user?.email) {
+          // Client users only see their own data matched by email
+          const myClient = c.find((cl: Client) => cl.email === user.email);
+          if (myClient) {
+            setClients([myClient]);
+            setSelectedClientId(myClient.id);
+          } else {
+            setClients([]);
+          }
+        } else {
+          // Admin can see all clients
+          setClients(c);
+          if (c.length > 0) {
+            setSelectedClientId(c[0].id);
+          }
         }
+        setAllTasks(t);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [isClientRole, user?.email]);
 
   const client = useMemo(
     () => clients.find((c) => c.id === selectedClientId),
@@ -80,7 +97,19 @@ export default function CustomerPortalPage() {
     );
   }
 
-  if (!client) return null;
+  if (!client) {
+    return (
+      <>
+        <Topbar title="Customer Portal" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-gray-500 text-sm mb-2">No client record found for your account.</div>
+            <div className="text-gray-600 text-xs">Please contact your account manager.</div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const statusColor: Record<string, string> = {
     Queued: "gray",
@@ -92,17 +121,19 @@ export default function CustomerPortalPage() {
   return (
     <>
       <Topbar title="Customer Portal">
-        <Select
-          value={selectedClientId}
-          onChange={(e) => setSelectedClientId(Number(e.target.value))}
-          className="!w-[200px]"
-        >
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+        {!isClientRole && (
+          <Select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(Number(e.target.value))}
+            className="!w-[200px]"
+          >
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
         <Badge color="blue">Client View</Badge>
       </Topbar>
 

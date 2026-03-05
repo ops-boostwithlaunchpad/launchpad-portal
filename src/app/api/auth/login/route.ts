@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findAdmin, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
 import { Employee } from "@/entity/Employee";
+import { ClientAccount } from "@/entity/ClientAccount";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -26,6 +27,24 @@ export async function POST(request: NextRequest) {
           name: employee.name,
           email: employee.email,
           role: "employee",
+        };
+      }
+    } catch {
+      // DB not available
+    }
+  }
+
+  // If not employee, check client accounts (registered clients)
+  if (!user) {
+    try {
+      const db = await getDB();
+      const client = await db.getRepository(ClientAccount).findOneBy({ email });
+      if (client && client.password === password) {
+        user = {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          role: "client",
         };
       }
     } catch {
