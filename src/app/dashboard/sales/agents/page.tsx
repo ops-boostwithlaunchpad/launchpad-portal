@@ -49,6 +49,7 @@ export default function AgentsPage() {
   const [name, setName] = useState("");
   const [agencyVal, setAgencyVal] = useState("");
   const [email, setEmail] = useState("");
+  const [passwordVal, setPasswordVal] = useState("");
   const [commission, setCommission] = useState("");
 
   // Assign client modal
@@ -129,21 +130,23 @@ export default function AgentsPage() {
   }
 
   // Agent form handlers
-  function resetForm() { setName(""); setAgencyVal(""); setEmail(""); setCommission(""); setEditTarget(null); }
+  function resetForm() { setName(""); setAgencyVal(""); setEmail(""); setPasswordVal(""); setCommission(""); setEditTarget(null); }
 
-  function openEdit(a: Agent) { setEditTarget(a); setName(a.name); setAgencyVal(a.agency); setCommission(String(a.commission)); setModalOpen(true); }
+  function openEdit(a: Agent) { setEditTarget(a); setName(a.name); setAgencyVal(a.agency); setEmail(a.email || ""); setPasswordVal(""); setCommission(String(a.commission)); setModalOpen(true); }
 
   async function handleSubmit() {
     if (!name.trim() || !agencyVal) return;
     if (editTarget) {
-      const res = await fetch("/api/agents", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        id: editTarget.id, name: name.trim(), agency: agencyVal, closed: editTarget.closed, mrr: editTarget.mrr, commission: Number(commission) || 0, month: editTarget.month, status: editTarget.status,
-      }) });
+      const body: Record<string, unknown> = {
+        id: editTarget.id, name: name.trim(), agency: agencyVal, email: email.trim(), closed: editTarget.closed, mrr: editTarget.mrr, commission: Number(commission) || 0, month: editTarget.month, status: editTarget.status,
+      };
+      if (passwordVal) body.password = passwordVal;
+      const res = await fetch("/api/agents", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const updated = await res.json();
       setAgents(agents.map((a) => (a.id === editTarget.id ? updated : a)));
     } else {
       const res = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        name: name.trim(), agency: agencyVal, closed: 0, mrr: 0, commission: Number(commission) || 0, month: 0, status: "Active",
+        name: name.trim(), agency: agencyVal, email: email.trim(), password: passwordVal, closed: 0, mrr: 0, commission: Number(commission) || 0, month: 0, status: "Active",
       }) });
       const created = await res.json();
       setAgents([...agents, created]);
@@ -295,6 +298,9 @@ export default function AgentsPage() {
         </FormRow>
         <FormRow>
           <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
+          <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}><Input type="password" placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} /></FormGroup>
+        </FormRow>
+        <FormRow>
           <FormGroup label="Commission %"><Input type="number" placeholder="e.g. 10" value={commission} onChange={(e) => setCommission(e.target.value)} /></FormGroup>
         </FormRow>
       </Modal>

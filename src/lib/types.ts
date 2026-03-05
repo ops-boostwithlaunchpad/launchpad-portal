@@ -1,4 +1,4 @@
-export type Role = "admin" | "sales" | "backend" | "client" | "employee";
+export type Role = "admin" | "sales" | "backend" | "client" | "employee" | "agent" | "agency";
 
 export type Department =
   | "Local SEO"
@@ -42,6 +42,7 @@ export interface Agency {
   id: number;
   name: string;
   agency: string;
+  email: string;
   agents: number;
   clients: number;
   mrr: number;
@@ -53,6 +54,7 @@ export interface Agent {
   id: number;
   name: string;
   agency: string;
+  email: string;
   closed: number;
   mrr: number;
   commission: number;

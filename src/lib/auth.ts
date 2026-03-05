@@ -73,6 +73,10 @@ export function getDefaultRoute(role: Role): string {
       return "/dashboard/backend";
     case "client":
       return "/dashboard/portal";
+    case "agent":
+      return "/dashboard/sales/master";
+    case "agency":
+      return "/dashboard/sales/master";
     default:
       return "/dashboard/backend";
   }
@@ -91,6 +95,10 @@ export function getAllowedRoutes(role: Role): string[] {
       return ["/dashboard/backend", "/dashboard/clients"];
     case "client":
       return ["/dashboard/portal"];
+    case "agent":
+      return ["/dashboard/sales", "/dashboard/clients"];
+    case "agency":
+      return ["/dashboard/sales", "/dashboard/clients"];
     default:
       return [];
   }

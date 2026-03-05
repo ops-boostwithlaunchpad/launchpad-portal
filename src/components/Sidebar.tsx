@@ -34,15 +34,15 @@ const navSections: NavSection[] = [
   {
     label: "Sales",
     items: [
-      { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "sales"] },
-      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "sales"] },
-      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "sales"] },
+      { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "sales", "agent", "agency"] },
+      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "sales", "agency"] },
+      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "sales", "agent", "agency"] },
     ],
   },
   {
     label: "Operations",
     items: [
-      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend", "employee"] },
+      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend", "employee", "agent", "agency"] },
       { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "backend", "employee"] },
     ],
   },
@@ -66,6 +66,8 @@ const roleBadgeColors: Record<Role, string> = {
   backend: "bg-amber-500/15 text-amber-400 border-amber-500/25",
   client: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
   employee: "bg-pink-500/15 text-pink-400 border-pink-500/25",
+  agent: "bg-violet-500/15 text-violet-400 border-violet-500/25",
+  agency: "bg-orange-500/15 text-orange-400 border-orange-500/25",
 };
 
 export function Sidebar() {

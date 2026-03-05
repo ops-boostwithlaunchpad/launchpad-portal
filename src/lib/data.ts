@@ -19,22 +19,22 @@ export const deals: Deal[] = [
 ];
 
 export const agencies: Agency[] = [
-  { id: 1, name: "Marcus Rivera", agency: "SunState Agency", agents: 6, clients: 11, mrr: 5400, commission: 15, status: "Active" },
-  { id: 2, name: "Laura Chen", agency: "FloriPro Agency", agents: 4, clients: 7, mrr: 3800, commission: 12, status: "Active" },
-  { id: 3, name: "Derek Johnson", agency: "NovaSales", agents: 3, clients: 4, mrr: 2700, commission: 10, status: "Active" },
-  { id: 4, name: "Priya Patel", agency: "Elevate Partners", agents: 2, clients: 3, mrr: 1900, commission: 12, status: "Onboarding" },
-  { id: 5, name: "Tony Marchetti", agency: "South FL Growth Co.", agents: 5, clients: 9, mrr: 4100, commission: 14, status: "Active" },
+  { id: 1, name: "Marcus Rivera", agency: "SunState Agency", email: "", agents: 6, clients: 11, mrr: 5400, commission: 15, status: "Active" },
+  { id: 2, name: "Laura Chen", agency: "FloriPro Agency", email: "", agents: 4, clients: 7, mrr: 3800, commission: 12, status: "Active" },
+  { id: 3, name: "Derek Johnson", agency: "NovaSales", email: "", agents: 3, clients: 4, mrr: 2700, commission: 10, status: "Active" },
+  { id: 4, name: "Priya Patel", agency: "Elevate Partners", email: "", agents: 2, clients: 3, mrr: 1900, commission: 12, status: "Onboarding" },
+  { id: 5, name: "Tony Marchetti", agency: "South FL Growth Co.", email: "", agents: 5, clients: 9, mrr: 4100, commission: 14, status: "Active" },
 ];
 
 export const agents: Agent[] = [
-  { id: 1, name: "Carlos Mendez", agency: "SunState Agency", closed: 9, mrr: 4200, commission: 10, month: 1100, status: "Active" },
-  { id: 2, name: "Jessica Torres", agency: "SunState Agency", closed: 6, mrr: 2800, commission: 10, month: 700, status: "Active" },
-  { id: 3, name: "Amy Kim", agency: "FloriPro Agency", closed: 5, mrr: 2400, commission: 12, month: 850, status: "Active" },
-  { id: 4, name: "Samuel Rodriguez", agency: "NovaSales", closed: 3, mrr: 1500, commission: 8, month: 400, status: "Active" },
-  { id: 5, name: "Brittany Walsh", agency: "South FL Growth Co.", closed: 7, mrr: 3100, commission: 11, month: 900, status: "Active" },
-  { id: 6, name: "Marco Delgado", agency: "South FL Growth Co.", closed: 4, mrr: 1900, commission: 11, month: 550, status: "Active" },
-  { id: 7, name: "Nina Johansson", agency: "Elevate Partners", closed: 2, mrr: 900, commission: 10, month: 300, status: "Active" },
-  { id: 8, name: "Ryan O'Brien", agency: "FloriPro Agency", closed: 1, mrr: 400, commission: 10, month: 0, status: "Onboarding" },
+  { id: 1, name: "Carlos Mendez", agency: "SunState Agency", email: "", closed: 9, mrr: 4200, commission: 10, month: 1100, status: "Active" },
+  { id: 2, name: "Jessica Torres", agency: "SunState Agency", email: "", closed: 6, mrr: 2800, commission: 10, month: 700, status: "Active" },
+  { id: 3, name: "Amy Kim", agency: "FloriPro Agency", email: "", closed: 5, mrr: 2400, commission: 12, month: 850, status: "Active" },
+  { id: 4, name: "Samuel Rodriguez", agency: "NovaSales", email: "", closed: 3, mrr: 1500, commission: 8, month: 400, status: "Active" },
+  { id: 5, name: "Brittany Walsh", agency: "South FL Growth Co.", email: "", closed: 7, mrr: 3100, commission: 11, month: 900, status: "Active" },
+  { id: 6, name: "Marco Delgado", agency: "South FL Growth Co.", email: "", closed: 4, mrr: 1900, commission: 11, month: 550, status: "Active" },
+  { id: 7, name: "Nina Johansson", agency: "Elevate Partners", email: "", closed: 2, mrr: 900, commission: 10, month: 300, status: "Active" },
+  { id: 8, name: "Ryan O'Brien", agency: "FloriPro Agency", email: "", closed: 1, mrr: 400, commission: 10, month: 0, status: "Onboarding" },
 ];
 
 export const clients: Client[] = [

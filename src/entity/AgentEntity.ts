@@ -27,6 +27,12 @@ export class AgentEntity {
   @Column({ type: "int" })
   month!: number;
 
+  @Column({ default: "" })
+  email!: string;
+
+  @Column({ default: "" })
+  password!: string;
+
   @Column()
   status!: string;
 }

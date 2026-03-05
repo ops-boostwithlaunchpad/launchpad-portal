@@ -3,6 +3,8 @@ import { findAdmin, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } f
 import { getDB } from "@/lib/db";
 import { Employee } from "@/entity/Employee";
 import { ClientAccount } from "@/entity/ClientAccount";
+import { AgentEntity } from "@/entity/AgentEntity";
+import { Agency } from "@/entity/Agency";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -34,7 +36,43 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // If not employee, check client accounts (registered clients)
+  // If not employee, check agents table
+  if (!user) {
+    try {
+      const db = await getDB();
+      const agent = await db.getRepository(AgentEntity).findOneBy({ email });
+      if (agent && agent.password === password) {
+        user = {
+          id: agent.id,
+          name: agent.name,
+          email: agent.email,
+          role: "agent",
+        };
+      }
+    } catch {
+      // DB not available
+    }
+  }
+
+  // If not agent, check agencies table
+  if (!user) {
+    try {
+      const db = await getDB();
+      const agencyUser = await db.getRepository(Agency).findOneBy({ email });
+      if (agencyUser && agencyUser.password === password) {
+        user = {
+          id: agencyUser.id,
+          name: agencyUser.name,
+          email: agencyUser.email,
+          role: "agency",
+        };
+      }
+    } catch {
+      // DB not available
+    }
+  }
+
+  // If not agency, check client accounts (registered clients)
   if (!user) {
     try {
       const db = await getDB();

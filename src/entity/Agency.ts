@@ -27,6 +27,12 @@ export class Agency {
   @Column({ type: "int" })
   commission!: number;
 
+  @Column({ default: "" })
+  email!: string;
+
+  @Column({ default: "" })
+  password!: string;
+
   @Column()
   status!: string;
 }

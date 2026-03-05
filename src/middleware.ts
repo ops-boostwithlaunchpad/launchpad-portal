@@ -12,6 +12,8 @@ const ROLE_ROUTES: Record<string, string[]> = {
   backend: ["/dashboard/backend", "/dashboard/clients"],
   employee: ["/dashboard/backend", "/dashboard/clients"],
   client: ["/dashboard/portal"],
+  agent: ["/dashboard/sales", "/dashboard/clients"],
+  agency: ["/dashboard/sales", "/dashboard/clients"],
 };
 
 const ROLE_DEFAULT: Record<string, string> = {
@@ -20,6 +22,8 @@ const ROLE_DEFAULT: Record<string, string> = {
   backend: "/dashboard/backend",
   employee: "/dashboard/backend",
   client: "/dashboard/portal",
+  agent: "/dashboard/sales/master",
+  agency: "/dashboard/sales/master",
 };
 
 export async function middleware(request: NextRequest) {

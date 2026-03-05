@@ -4,7 +4,7 @@ import { Deal } from "@/entity/Deal";
 import { requireRole } from "@/lib/apiAuth";
 
 export async function GET() {
-  const { error } = await requireRole("admin", "sales");
+  const { error } = await requireRole("admin", "sales", "agent", "agency");
   if (error) return error;
   try {
     const db = await getDB();
@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin", "sales");
+  const { error } = await requireRole("admin", "sales", "agent", "agency");
   if (error) return error;
   try {
     const db = await getDB();

@@ -47,6 +47,7 @@ export default function AgenciesPage() {
   const [name, setName] = useState("");
   const [agency, setAgency] = useState("");
   const [email, setEmail] = useState("");
+  const [passwordVal, setPasswordVal] = useState("");
   const [commission, setCommission] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -125,18 +126,20 @@ export default function AgenciesPage() {
     setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
-  function resetForm() { setName(""); setAgency(""); setEmail(""); setCommission(""); setNotes(""); setEditTarget(null); }
+  function resetForm() { setName(""); setAgency(""); setEmail(""); setPasswordVal(""); setCommission(""); setNotes(""); setEditTarget(null); }
 
-  function openEdit(a: Agency) { setEditTarget(a); setName(a.name); setAgency(a.agency); setCommission(String(a.commission)); setModalOpen(true); }
+  function openEdit(a: Agency) { setEditTarget(a); setName(a.name); setAgency(a.agency); setEmail(a.email || ""); setPasswordVal(""); setCommission(String(a.commission)); setModalOpen(true); }
 
   async function handleSubmit() {
     if (!name.trim() || !agency.trim()) return;
     if (editTarget) {
-      const res = await fetch("/api/agencies", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editTarget.id, name: name.trim(), agency: agency.trim(), commission: Number(commission) || 0 }) });
+      const body: Record<string, unknown> = { id: editTarget.id, name: name.trim(), agency: agency.trim(), email: email.trim(), commission: Number(commission) || 0 };
+      if (passwordVal) body.password = passwordVal;
+      const res = await fetch("/api/agencies", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const updated = await res.json();
       setAgencies(agencies.map((a) => (a.id === editTarget.id ? updated : a)));
     } else {
-      const res = await fetch("/api/agencies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), agency: agency.trim(), agents: 0, clients: 0, mrr: 0, commission: Number(commission) || 0, status: "Onboarding" }) });
+      const res = await fetch("/api/agencies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), agency: agency.trim(), email: email.trim(), password: passwordVal, agents: 0, clients: 0, mrr: 0, commission: Number(commission) || 0, status: "Onboarding" }) });
       const created = await res.json();
       setAgencies([...agencies, created]);
     }
@@ -288,6 +291,9 @@ export default function AgenciesPage() {
         </FormRow>
         <FormRow>
           <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
+          <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}><Input type="password" placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} /></FormGroup>
+        </FormRow>
+        <FormRow>
           <FormGroup label="Commission %"><Input type="number" placeholder="e.g. 12" value={commission} onChange={(e) => setCommission(e.target.value)} /></FormGroup>
         </FormRow>
         <FormGroup label="Notes"><Textarea placeholder="Additional notes..." value={notes} onChange={(e) => setNotes(e.target.value)} /></FormGroup>
