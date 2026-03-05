@@ -4,6 +4,7 @@ import { NotificationProvider } from "@/hooks/useNotifications";
 import { ToastContainer } from "@/components/ToastNotification";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  console.log("DashboardLayout rendered",process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   return (
     <AuthProvider>
       <NotificationProvider>
