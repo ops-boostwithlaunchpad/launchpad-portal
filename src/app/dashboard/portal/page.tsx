@@ -296,7 +296,9 @@ export default function CustomerPortalPage() {
                     <td className="px-3 py-2.5">
                       <ServiceBadge service={t.service} />
                     </td>
-                    <td className="px-3 py-2.5 text-gray-500 text-[11px]">{t.team}</td>
+                    <td className="px-3 py-2.5 text-gray-500 text-[11px]">
+                      {t.assignedToName || t.team}
+                    </td>
                     <td className="px-3 py-2.5">
                       <StatusBadge status={t.status} />
                     </td>

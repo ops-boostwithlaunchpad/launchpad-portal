@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
 import { Task } from "@/entity/Task";
+import { ClientAccount } from "@/entity/ClientAccount";
 import { requireRole } from "@/lib/apiAuth";
 import { getCurrentUser } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
@@ -84,7 +85,12 @@ export async function PATCH(request: NextRequest) {
     // Create notifications via Supabase (triggers Realtime) — skip if Supabase not configured
     const sb = getSupabase();
     if (sb) {
+      // Look up client account for client notifications
+      const clientAccount = await db.getRepository(ClientAccount).findOneBy({ name: task.client });
+      const clientUserId = clientAccount?.id;
+
       if (wasAssigned && assignedTo) {
+        // Notify the assigned employee
         await sb.from("lp_notifications").insert({
           user_id: assignedTo,
           title: "Task Assigned",
@@ -92,6 +98,17 @@ export async function PATCH(request: NextRequest) {
           type: "task_assigned",
           task_id: task.id,
         });
+
+        // Notify the client that an employee was assigned
+        if (clientUserId) {
+          await sb.from("lp_notifications").insert({
+            user_id: clientUserId,
+            title: "Team Member Assigned",
+            message: `${assignedToName || "A team member"} has been assigned to your ${task.service} task`,
+            type: "task_assigned",
+            task_id: task.id,
+          });
+        }
       }
 
       if (statusChanged && (status === "In Progress" || status === "Done")) {
@@ -99,6 +116,7 @@ export async function PATCH(request: NextRequest) {
         const userName = currentUser?.name || "An employee";
         const action = status === "In Progress" ? "started" : "completed";
 
+        // Notify admin
         await sb.from("lp_notifications").insert({
           user_id: 0,
           title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
@@ -106,6 +124,17 @@ export async function PATCH(request: NextRequest) {
           type: status === "In Progress" ? "task_started" : "task_completed",
           task_id: task.id,
         });
+
+        // Notify the client about status change
+        if (clientUserId) {
+          await sb.from("lp_notifications").insert({
+            user_id: clientUserId,
+            title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+            message: `Your ${task.service} task has been ${action}`,
+            type: status === "In Progress" ? "task_started" : "task_completed",
+            task_id: task.id,
+          });
+        }
       }
     }
 
