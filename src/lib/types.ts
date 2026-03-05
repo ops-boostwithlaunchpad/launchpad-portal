@@ -86,6 +86,8 @@ export interface Task {
   notes: string;
   status: "Queued" | "In Progress" | "Review" | "Done";
   logs: string[];
+  assignedTo?: number | null;
+  assignedToName?: string | null;
 }
 
 export type ServiceType =

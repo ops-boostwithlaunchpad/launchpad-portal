@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
@@ -44,6 +45,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend", "employee", "agent", "agency"] },
       { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "backend", "employee"] },
+      { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
   },
   {

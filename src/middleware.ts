@@ -10,7 +10,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/dashboard"],
   sales: ["/dashboard/sales", "/dashboard/clients"],
   backend: ["/dashboard/backend", "/dashboard/clients"],
-  employee: ["/dashboard/backend", "/dashboard/clients"],
+  employee: ["/dashboard/backend", "/dashboard/clients", "/dashboard/my-tasks"],
   client: ["/dashboard/portal"],
   agent: ["/dashboard/sales", "/dashboard/clients"],
   agency: ["/dashboard/sales", "/dashboard/clients"],

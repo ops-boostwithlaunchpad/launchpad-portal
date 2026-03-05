@@ -92,7 +92,7 @@ export function getAllowedRoutes(role: Role): string[] {
     case "backend":
       return ["/dashboard/backend", "/dashboard/clients"];
     case "employee":
-      return ["/dashboard/backend", "/dashboard/clients"];
+      return ["/dashboard/backend", "/dashboard/clients", "/dashboard/my-tasks"];
     case "client":
       return ["/dashboard/portal"];
     case "agent":

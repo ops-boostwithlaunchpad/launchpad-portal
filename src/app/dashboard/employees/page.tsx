@@ -10,8 +10,13 @@ import { FormGroup, FormRow, Input, Select } from "@/components/FormGroup";
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Avatar } from "@/components/Avatar";
+import { StatusBadge, PrioBadge, ServiceBadge } from "@/components/Badge";
 import { DEPARTMENTS } from "@/lib/types";
-import { Users, UserPlus, Building2, Shield, Trash2, Pencil, Eye, EyeOff } from "lucide-react";
+import type { Task, Client } from "@/lib/types";
+import {
+  Users, UserPlus, Building2, Shield, Trash2, Pencil, Eye, EyeOff,
+  ClipboardList, X,
+} from "lucide-react";
 
 interface EmployeeRow {
   id: number;
@@ -47,6 +52,22 @@ export default function EmployeesPage() {
   const [password, setPassword] = useState("");
   const [department, setDepartment] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Assign Task modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignEmployee, setAssignEmployee] = useState<EmployeeRow | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState("");
+  const [queuedTasks, setQueuedTasks] = useState<Task[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [assigning, setAssigning] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
+  // Employee tasks viewer modal state
+  const [viewTasksEmployee, setViewTasksEmployee] = useState<EmployeeRow | null>(null);
+  const [employeeTasks, setEmployeeTasks] = useState<Task[]>([]);
+  const [loadingEmpTasks, setLoadingEmpTasks] = useState(false);
+  const [empTaskTab, setEmpTaskTab] = useState("Queue");
 
   useEffect(() => {
     fetch("/api/employees")
@@ -148,6 +169,63 @@ export default function EmployeesPage() {
     setDeleteTarget(null);
   }
 
+  // --- Assign Task ---
+  async function openAssignModal(emp: EmployeeRow) {
+    setAssignEmployee(emp);
+    setSelectedClient("");
+    setQueuedTasks([]);
+    setSelectedTaskId(null);
+    setAssignModalOpen(true);
+
+    // Fetch clients
+    const res = await fetch("/api/clients");
+    const data = await res.json();
+    setClients(Array.isArray(data) ? data.filter((c: Client) => c.status === "Active") : []);
+  }
+
+  async function handleClientSelect(clientName: string) {
+    setSelectedClient(clientName);
+    setSelectedTaskId(null);
+    if (!clientName) {
+      setQueuedTasks([]);
+      return;
+    }
+    setLoadingTasks(true);
+    const res = await fetch(`/api/tasks?status=Queued`);
+    const data: Task[] = await res.json();
+    // Filter by client name and only unassigned tasks
+    setQueuedTasks(data.filter((t) => t.client === clientName && !t.assignedTo));
+    setLoadingTasks(false);
+  }
+
+  async function handleAssignTask() {
+    if (!assignEmployee || !selectedTaskId) return;
+    setAssigning(true);
+    await fetch("/api/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: selectedTaskId,
+        assignedTo: assignEmployee.id,
+        assignedToName: assignEmployee.name,
+      }),
+    });
+
+    setAssigning(false);
+    setAssignModalOpen(false);
+    setAssignEmployee(null);
+  }
+
+  // --- View Employee Tasks ---
+  async function openEmployeeTasks(emp: EmployeeRow) {
+    setViewTasksEmployee(emp);
+    setLoadingEmpTasks(true);
+    const res = await fetch(`/api/tasks?assignedTo=${emp.id}`);
+    const data = await res.json();
+    setEmployeeTasks(Array.isArray(data) ? data : []);
+    setLoadingEmpTasks(false);
+  }
+
   const columns = [
     {
       key: "name",
@@ -194,13 +272,20 @@ export default function EmployeesPage() {
       render: (emp: EmployeeRow) => (
         <div className="flex items-center gap-1">
           <button
-            onClick={() => openEdit(emp)}
+            onClick={(e) => { e.stopPropagation(); openAssignModal(emp); }}
+            className="text-gray-600 hover:text-emerald-400 transition-colors p-1"
+            title="Assign Task"
+          >
+            <ClipboardList size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
             className="text-gray-600 hover:text-indigo-400 transition-colors p-1"
           >
             <Pencil size={14} />
           </button>
           <button
-            onClick={() => setDeleteTarget(emp)}
+            onClick={(e) => { e.stopPropagation(); setDeleteTarget(emp); }}
             className="text-gray-500 hover:text-red-400 transition-colors p-1"
           >
             <Trash2 size={14} />
@@ -234,10 +319,11 @@ export default function EmployeesPage() {
         </StatsRow>
 
         <Card title="All Employees">
-          <DataTable columns={columns} data={employees} />
+          <DataTable columns={columns} data={employees} onRowClick={openEmployeeTasks} />
         </Card>
       </div>
 
+      {/* Add/Edit Employee Modal */}
       <Modal
         open={modalOpen}
         onClose={() => {
@@ -313,6 +399,153 @@ export default function EmployeesPage() {
             </Select>
           </FormGroup>
         </FormRow>
+      </Modal>
+
+      {/* Assign Task Modal */}
+      <Modal
+        open={assignModalOpen}
+        onClose={() => { setAssignModalOpen(false); setAssignEmployee(null); }}
+        title={`Assign Task to ${assignEmployee?.name ?? ""}`}
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => { setAssignModalOpen(false); setAssignEmployee(null); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignTask} disabled={!selectedTaskId || assigning}>
+              {assigning ? "Assigning..." : "Assign Task"}
+            </Button>
+          </>
+        }
+      >
+        <FormGroup label="Select Client">
+          <Select value={selectedClient} onChange={(e) => handleClientSelect(e.target.value)}>
+            <option value="">Choose a client...</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </Select>
+        </FormGroup>
+
+        {selectedClient && (
+          <div className="mt-4">
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+              Queued Tasks for {selectedClient}
+            </div>
+            {loadingTasks ? (
+              <div className="text-center text-gray-500 text-xs py-4">Loading tasks...</div>
+            ) : queuedTasks.length === 0 ? (
+              <div className="text-center text-gray-500 text-xs py-4">No queued tasks available for this client.</div>
+            ) : (
+              <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                {queuedTasks.map((task) => (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => setSelectedTaskId(task.id)}
+                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      selectedTaskId === task.id
+                        ? "border-indigo-500/50 bg-indigo-500/10"
+                        : "border-[#242433] bg-[#0d0d14] hover:border-[#363648]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <ServiceBadge service={task.service} />
+                      <PrioBadge priority={task.priority} />
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-1">
+                      Team: {task.team}
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">
+                      Due: {task.due}
+                    </div>
+                    {task.notes && (
+                      <div className="text-[11px] text-gray-600 mt-1 truncate">
+                        {task.notes}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* View Employee Tasks Modal */}
+      <Modal
+        open={!!viewTasksEmployee}
+        onClose={() => { setViewTasksEmployee(null); setEmployeeTasks([]); setEmpTaskTab("Queue"); }}
+        title={`Tasks — ${viewTasksEmployee?.name ?? ""}`}
+      >
+        {loadingEmpTasks ? (
+          <div className="text-center text-gray-500 text-xs py-6">Loading tasks...</div>
+        ) : (() => {
+          const queueCount = employeeTasks.filter((t) => t.status === "Queued").length;
+          const progressCount = employeeTasks.filter((t) => t.status === "In Progress").length;
+          const doneCount = employeeTasks.filter((t) => t.status === "Done").length;
+          const filtered = employeeTasks.filter((t) => {
+            if (empTaskTab === "Queue") return t.status === "Queued";
+            if (empTaskTab === "Progress") return t.status === "In Progress";
+            return t.status === "Done";
+          });
+
+          return (
+            <>
+              <div className="flex gap-0.5 bg-[#09090f] border border-[#242433] rounded-lg p-0.5 w-fit mb-3">
+                {([
+                  { key: "Queue", label: "Queue", count: queueCount },
+                  { key: "Progress", label: "Progress", count: progressCount },
+                  { key: "Completed", label: "Completed", count: doneCount },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setEmpTaskTab(tab.key)}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
+                      empTaskTab === tab.key
+                        ? "bg-indigo-500 text-white font-semibold"
+                        : "text-gray-500 hover:text-gray-200"
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold ${
+                      empTaskTab === tab.key ? "bg-white/20 text-white" : "bg-[#242433] text-gray-400"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="text-center text-gray-500 text-xs py-6">
+                  No {empTaskTab === "Queue" ? "queued" : empTaskTab === "Progress" ? "in-progress" : "completed"} tasks.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                  {filtered.map((task) => (
+                    <div
+                      key={task.id}
+                      className="p-3 rounded-lg border border-[#242433] bg-[#0d0d14]"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[12px] font-medium text-gray-200">{task.client}</span>
+                        <StatusBadge status={task.status} />
+                      </div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <ServiceBadge service={task.service} />
+                        <PrioBadge priority={task.priority} />
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[11px] text-gray-500">Team: {task.team}</span>
+                        <span className="text-[11px] text-gray-500">Due: {task.due}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </Modal>
 
       <ConfirmModal

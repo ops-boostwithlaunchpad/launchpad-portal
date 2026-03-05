@@ -28,7 +28,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
       className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="bg-[#111118] border border-[#242433] rounded-2xl p-6 w-full max-w-[540px] max-h-[88vh] overflow-y-auto">
+      <div className="bg-[#111118] border border-[#242433] rounded-2xl p-6 w-full max-w-[540px] h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold">{title}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">

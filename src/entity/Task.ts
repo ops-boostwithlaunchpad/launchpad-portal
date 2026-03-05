@@ -32,4 +32,10 @@ export class Task {
 
   @Column("simple-array")
   logs!: string[];
+
+  @Column({ type: "int", nullable: true })
+  assignedTo!: number | null;
+
+  @Column({ type: "varchar", nullable: true })
+  assignedToName!: string | null;
 }
