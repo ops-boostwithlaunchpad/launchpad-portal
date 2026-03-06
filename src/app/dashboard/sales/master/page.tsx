@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trash2, Pencil, DollarSign, Flame, Hash, Target } from "lucide-react";
 import { Topbar, SearchInput } from "@/components/Topbar";
 import { StatCard, StatsRow } from "@/components/StatCard";
 import { Card, DataTable } from "@/components/DataTable";
@@ -135,7 +134,7 @@ export default function SalesMasterPage() {
       render: (d: Deal) => (
         <div className="flex items-center gap-2">
           <Avatar name={d.client} size="sm" />
-          <span className="font-medium text-gray-200">{d.client}</span>
+          <span className="font-medium text-gray-800">{d.client}</span>
         </div>
       ),
     },
@@ -158,7 +157,7 @@ export default function SalesMasterPage() {
       key: "mrr",
       header: "MRR",
       render: (d: Deal) => (
-        <span className="text-emerald-400 font-mono">
+        <span className="text-emerald-600 font-mono">
           ${d.mrr.toLocaleString()}
         </span>
       ),
@@ -182,15 +181,15 @@ export default function SalesMasterPage() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEdit(d)}
-            className="text-gray-600 hover:text-indigo-400 transition-colors p-1"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-[12px]"
           >
-            <Pencil size={14} />
+            Edit
           </button>
           <button
             onClick={() => setDeleteTarget(d)}
-            className="text-gray-600 hover:text-red-400 transition-colors p-1"
+            className="text-gray-400 hover:text-red-600 transition-colors p-1 text-[12px]"
           >
-            <Trash2 size={14} />
+            Delete
           </button>
         </div>
       ),
@@ -215,7 +214,7 @@ export default function SalesMasterPage() {
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
-          className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-200 outline-none focus:border-indigo-500"
+          className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12px] text-gray-800 outline-none focus:border-indigo-500"
         >
           <option value="">All Stages</option>
           {STAGES.map((s) => (
@@ -237,28 +236,21 @@ export default function SalesMasterPage() {
             sub="↑ 18% this month"
             trend="up"
             valueColor="green"
-            icon={DollarSign}
           />
           <StatCard
             value="$20K"
             label="Priority Pipeline"
             sub="Hot — Medical Practice"
-            icon={Flame}
-            iconColor="orange"
           />
           <StatCard
             value={String(deals.length)}
             label="Total Deals"
-            icon={Hash}
-            iconColor="blue"
           />
           <StatCard
             value="68%"
             label="Close Rate"
             sub="↑ vs last quarter"
             trend="up"
-            icon={Target}
-            iconColor="purple"
           />
         </StatsRow>
 

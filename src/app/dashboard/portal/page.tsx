@@ -9,20 +9,7 @@ import { Select } from "@/components/FormGroup";
 import { Client, Task } from "@/lib/types";
 import { SVC_DESC } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
-import {
-  TrendingUp,
-  Hash,
-  ListChecks,
-  Percent,
-  FileText,
-  Zap,
-  CheckCircle,
-  Clock,
-  Send,
-  BarChart3,
-} from "lucide-react";
 
-const updateIcons = [CheckCircle, BarChart3, Send, FileText, Zap];
 const updateLabels = ["Completed", "Reported", "Submitted", "Published", "Updated"];
 const updateTimes = [
   "Today, 10:32 AM",
@@ -104,7 +91,7 @@ export default function CustomerPortalPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-gray-500 text-sm mb-2">No client record found for your account.</div>
-            <div className="text-gray-600 text-xs">Please contact your account manager.</div>
+            <div className="text-gray-400 text-xs">Please contact your account manager.</div>
           </div>
         </div>
       </>
@@ -139,8 +126,8 @@ export default function CustomerPortalPage() {
 
       <div className="p-4 md:p-6 flex-1">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-indigo-500/10 to-violet-500/5 border border-[#242433] rounded-2xl p-4 sm:p-6 md:p-8 mb-5 text-center">
-          <div className="text-[9px] text-indigo-400 uppercase tracking-[2px] mb-2">
+        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-gray-200 rounded-2xl p-4 sm:p-6 md:p-8 mb-5 text-center">
+          <div className="text-[9px] text-indigo-600 uppercase tracking-[2px] mb-2">
             Boost with Launchpad
           </div>
           <h2 className="text-2xl md:text-3xl font-bold font-serif mb-1">{client.name}</h2>
@@ -151,8 +138,7 @@ export default function CustomerPortalPage() {
           <div className="grid grid-cols-2 sm:flex gap-4 sm:gap-6 md:gap-10 justify-center mt-6">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <TrendingUp size={16} className="text-emerald-400" />
-                <span className="text-2xl font-bold font-serif text-emerald-400">
+                <span className="text-2xl font-bold font-serif text-emerald-600">
                   +{traffic}%
                 </span>
               </div>
@@ -162,7 +148,6 @@ export default function CustomerPortalPage() {
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Hash size={16} className="text-gray-200" />
                 <span className="text-2xl font-bold font-serif">{rank}</span>
               </div>
               <div className="text-[9.5px] text-gray-500 uppercase tracking-wide">
@@ -171,8 +156,7 @@ export default function CustomerPortalPage() {
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <ListChecks size={16} className="text-indigo-400" />
-                <span className="text-2xl font-bold font-serif text-indigo-400">
+                <span className="text-2xl font-bold font-serif text-indigo-600">
                   {clientTasks.length}
                 </span>
               </div>
@@ -182,8 +166,7 @@ export default function CustomerPortalPage() {
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Percent size={16} className="text-amber-400" />
-                <span className="text-2xl font-bold font-serif text-amber-400">{pct}%</span>
+                <span className="text-2xl font-bold font-serif text-amber-600">{pct}%</span>
               </div>
               <div className="text-[9.5px] text-gray-500 uppercase tracking-wide">
                 This Month
@@ -205,7 +188,7 @@ export default function CustomerPortalPage() {
                 return (
                   <div
                     key={s}
-                    className="bg-[#111118] border border-[#242433] rounded-xl p-4"
+                    className="bg-white border border-gray-200 rounded-xl p-4"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -216,7 +199,7 @@ export default function CustomerPortalPage() {
                       </div>
                       <Badge color="green">Active</Badge>
                     </div>
-                    <div className="h-[3px] bg-[#242433] rounded-full overflow-hidden mt-2">
+                    <div className="h-[3px] bg-gray-200 rounded-full overflow-hidden mt-2">
                       <div
                         className="h-full bg-indigo-500 rounded-full transition-all"
                         style={{ width: `${progress}%` }}
@@ -238,14 +221,9 @@ export default function CustomerPortalPage() {
             </div>
             <Card>
               {clientTasks.length > 0 ? (
-                <div className="divide-y divide-[#242433]/50">
-                  {clientTasks.slice(0, 5).map((t, i) => {
-                    const Icon = updateIcons[i % updateIcons.length];
-                    return (
+                <div className="divide-y divide-gray-200">
+                  {clientTasks.slice(0, 5).map((t, i) => (
                       <div key={t.id} className="flex gap-3 py-2.5 first:pt-0 last:pb-0">
-                        <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
-                          <Icon size={13} />
-                        </div>
                         <div>
                           <div className="text-[12.5px]">
                             {t.service} — {updateLabels[i % updateLabels.length]}
@@ -255,8 +233,7 @@ export default function CustomerPortalPage() {
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
                 </div>
               ) : (
                 <div className="text-gray-500 text-xs py-2">No updates yet.</div>
@@ -274,7 +251,7 @@ export default function CustomerPortalPage() {
                   {["Task", "Service", "Team", "Status", "Due Date"].map((h) => (
                     <th
                       key={h}
-                      className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-[#242433] font-semibold"
+                      className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-gray-200 font-semibold"
                     >
                       {h}
                     </th>
@@ -285,13 +262,10 @@ export default function CustomerPortalPage() {
                 {clientTasks.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-[#242433]/60 hover:bg-[#1a1a26] transition-colors"
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-3 py-2.5 font-medium">
-                      <div className="flex items-center gap-2">
-                        <Clock size={12} className="text-gray-500" />
-                        {t.service} work
-                      </div>
+                      {t.service} work
                     </td>
                     <td className="px-3 py-2.5">
                       <ServiceBadge service={t.service} />

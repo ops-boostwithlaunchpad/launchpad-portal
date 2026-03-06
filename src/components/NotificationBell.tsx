@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Check } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -34,9 +34,9 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="text-gray-500 hover:text-gray-300 transition-colors p-1.5 relative cursor-pointer"
+        className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 relative cursor-pointer"
       >
-        <Bell size={15} />
+        <Bell size={16} />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -45,17 +45,16 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[340px] bg-[#111118] border border-[#242433] rounded-xl shadow-2xl overflow-hidden z-50">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#242433]">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+        <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[340px] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
               Notifications
             </span>
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="text-[10px] text-purple-400 hover:text-purple-300 font-medium cursor-pointer flex items-center gap-1"
+                className="text-[10px] text-purple-600 hover:text-purple-500 font-medium cursor-pointer flex items-center gap-1"
               >
-                <Check size={10} />
                 Mark all read
               </button>
             )}
@@ -63,7 +62,7 @@ export function NotificationBell() {
 
           <div className="max-h-[360px] overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="text-center text-gray-500 text-xs py-8">
+              <div className="text-center text-gray-400 text-xs py-8">
                 No notifications yet.
               </div>
             ) : (
@@ -73,18 +72,18 @@ export function NotificationBell() {
                   onClick={() => {
                     if (!n.is_read) markAsRead([n.id]);
                   }}
-                  className={`w-full text-left px-4 py-3 border-b border-[#242433]/50 transition-colors hover:bg-[#1a1a26] cursor-pointer ${
-                    !n.is_read ? "bg-purple-500/5" : ""
+                  className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors hover:bg-gray-50 cursor-pointer ${
+                    !n.is_read ? "bg-purple-50/50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     {!n.is_read && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold text-gray-300">{n.title}</p>
-                      <p className="text-[12px] text-gray-400 leading-relaxed">{n.message}</p>
-                      <span className="text-[10px] text-gray-500 mt-0.5 block">
+                      <p className="text-[11px] font-semibold text-gray-700">{n.title}</p>
+                      <p className="text-[12px] text-gray-500 leading-relaxed">{n.message}</p>
+                      <span className="text-[10px] text-gray-400 mt-0.5 block">
                         {timeAgo(n.created_at)}
                       </span>
                     </div>

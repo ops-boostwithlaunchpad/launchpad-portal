@@ -3,8 +3,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090f;
-  --foreground: #e8e8f2;
+  --background: #f8f9fb;
+  --foreground: #1a1a2e;
 }
 
 @theme inline {
@@ -35,11 +35,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #242433;
+  background: #d1d5db;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a50;
+  background: #9ca3af;
 }
 
 /* Toast slide-in animation */

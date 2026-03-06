@@ -7,7 +7,6 @@ import { Button } from "@/components/Button";
 import { ServiceBadge, PrioBadge, StatusBadge } from "@/components/Badge";
 import { useAuth } from "@/lib/AuthContext";
 import type { Task } from "@/lib/types";
-import { Play, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function MyTasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -81,15 +80,15 @@ export default function MyTasksPage() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="text-gray-500 hover:text-gray-300 transition-colors p-1.5 cursor-pointer"
+          className="text-gray-500 hover:text-gray-700 transition-colors p-1.5 cursor-pointer"
           title="Refresh tasks"
         >
-          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          Refresh
         </button>
       </Topbar>
 
       <div className="p-4 md:p-6">
-        <div className="flex gap-0.5 bg-[#111118] border border-[#242433] rounded-lg p-0.5 w-fit mb-5 overflow-x-auto max-w-full">
+        <div className="flex gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5 w-fit mb-5 overflow-x-auto max-w-full">
           {tabsWithCounts.map((tab) => (
             <button
               key={tab.key}
@@ -97,12 +96,12 @@ export default function MyTasksPage() {
               className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === tab.key
                   ? "bg-indigo-500 text-white font-semibold"
-                  : "text-gray-500 hover:text-gray-200"
+                  : "text-gray-500 hover:text-gray-800"
               }`}
             >
               {tab.label}
               <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold ${
-                activeTab === tab.key ? "bg-white/20 text-white" : "bg-[#242433] text-gray-400"
+                activeTab === tab.key ? "bg-white/80 text-white" : "bg-gray-200 text-gray-500"
               }`}>
                 {tab.count}
               </span>
@@ -119,10 +118,10 @@ export default function MyTasksPage() {
             {filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-[#111118] border border-[#242433] rounded-xl p-4"
+                className="bg-white border border-gray-200 rounded-xl p-4"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[13px] font-semibold text-gray-200">{task.client}</span>
+                  <span className="text-[13px] font-semibold text-gray-800">{task.client}</span>
                   <StatusBadge status={task.status} />
                 </div>
 
@@ -137,7 +136,7 @@ export default function MyTasksPage() {
                 </div>
 
                 {task.notes && (
-                  <div className="text-[12px] text-gray-400 mb-3 leading-relaxed">
+                  <div className="text-[12px] text-gray-500 mb-3 leading-relaxed">
                     {task.notes}
                   </div>
                 )}
@@ -150,7 +149,6 @@ export default function MyTasksPage() {
                     disabled={updating === task.id}
                     className="flex gap-1 items-center"
                   >
-                    <Play size={12} className="mr-1" />
                     {updating === task.id ? "Starting..." : "Start Task"}
                   </Button>
                 )}
@@ -162,7 +160,6 @@ export default function MyTasksPage() {
                     disabled={updating === task.id}
                      className="flex gap-1 items-center"
                   >
-                    <CheckCircle2 size={12} className="mr-1" />
                     {updating === task.id ? "Completing..." : "Mark Complete"}
                   </Button>
                 )}

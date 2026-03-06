@@ -1,6 +1,5 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 
@@ -39,12 +38,7 @@ export function ConfirmModal({
         </>
       }
     >
-      <div className="flex gap-3 items-start">
-        <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-          <AlertTriangle size={18} className="text-red-400" />
-        </div>
-        <p className="text-sm text-gray-300 leading-relaxed pt-1">{message}</p>
-      </div>
+      <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
     </Modal>
   );
 }

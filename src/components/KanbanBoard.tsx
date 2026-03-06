@@ -10,9 +10,9 @@ interface KanbanBoardProps {
 
 const columns: { key: Task["status"]; label: string; color: string }[] = [
   { key: "Queued", label: "Queued", color: "text-gray-500" },
-  { key: "In Progress", label: "In Progress", color: "text-amber-400" },
-  { key: "Review", label: "Review", color: "text-indigo-400" },
-  { key: "Done", label: "Done", color: "text-emerald-400" },
+  { key: "In Progress", label: "In Progress", color: "text-amber-600" },
+  { key: "Review", label: "Review", color: "text-indigo-600" },
+  { key: "Done", label: "Done", color: "text-emerald-600" },
 ];
 
 export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
@@ -28,13 +28,13 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
       {columns.map((col) => (
         <div
           key={col.key}
-          className="bg-[#111118] border border-[#242433] rounded-xl p-3 min-h-[180px]"
+          className="bg-gray-50 border border-gray-200 rounded-xl p-3 min-h-[180px]"
         >
           <div className="flex items-center justify-between mb-3">
             <h4 className={`text-[10px] font-bold uppercase tracking-wider ${col.color}`}>
               {col.label}
             </h4>
-            <span className="text-[10px] bg-[#1a1a26] px-2 py-0.5 rounded-full text-gray-500">
+            <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded-full text-gray-600">
               {grouped[col.key].length}
             </span>
           </div>
@@ -42,13 +42,13 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
             {grouped[col.key].map((task) => (
               <div
                 key={task.id}
-                className="bg-[#09090f] border border-[#242433] rounded-lg p-3 cursor-pointer transition-colors hover:border-indigo-500/40"
+                className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer transition-colors hover:border-indigo-400 shadow-sm"
                 onClick={() => onTaskClick(task)}
               >
-                <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-wide mb-1">
+                <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide mb-1">
                   {task.client}
                 </div>
-                <div className="text-xs font-medium mb-1.5">{task.service}</div>
+                <div className="text-xs font-medium text-gray-800 mb-1.5">{task.service}</div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-500">
                     {task.team.split(" ")[0]}

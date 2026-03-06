@@ -10,7 +10,6 @@ import { Modal } from "@/components/Modal";
 import { Button } from "@/components/Button";
 import { PrioBadge } from "@/components/Badge";
 import { Task, TEAMS } from "@/lib/types";
-import { Loader, Clock, Eye, CheckCircle2 } from "lucide-react";
 
 export default function BackendWorkBoardPage() {
   const [tasksList, setTasksList] = useState<Task[]>([]);
@@ -110,26 +109,21 @@ export default function BackendWorkBoardPage() {
           <StatCard
             value={String(queuedCount)}
             label="Queued"
-            icon={Clock}
-            iconColor="orange"
           />
           <StatCard
             value={String(inProgressCount)}
             label="In Progress"
             valueColor="yellow"
-            icon={Loader}
           />
           <StatCard
             value={String(reviewCount)}
             label="In Review"
             valueColor="blue"
-            icon={Eye}
           />
           <StatCard
             value={String(doneCount)}
             label="Done"
             valueColor="green"
-            icon={CheckCircle2}
           />
         </StatsRow>
 
@@ -155,12 +149,12 @@ export default function BackendWorkBoardPage() {
         {selectedTask && (
           <div className="space-y-4">
             {/* Service label */}
-            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
               {selectedTask.service}
             </p>
 
             {/* Divider */}
-            <div className="h-px bg-[#242433]" />
+            <div className="h-px bg-gray-200" />
 
             {/* 3-column grid: Team, Priority, Due */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -168,7 +162,7 @@ export default function BackendWorkBoardPage() {
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
                   Team
                 </p>
-                <p className="text-xs text-gray-200">{selectedTask.team}</p>
+                <p className="text-xs text-gray-800">{selectedTask.team}</p>
               </div>
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
@@ -180,7 +174,7 @@ export default function BackendWorkBoardPage() {
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
                   Due
                 </p>
-                <p className="text-xs text-gray-200 font-mono">
+                <p className="text-xs text-gray-800 font-mono">
                   {selectedTask.due}
                 </p>
               </div>
@@ -191,7 +185,7 @@ export default function BackendWorkBoardPage() {
               <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
                 Brief
               </p>
-              <div className="bg-[#09090f] rounded-lg p-3 text-xs text-gray-300 leading-relaxed">
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 leading-relaxed">
                 {selectedTask.notes}
               </div>
             </div>
@@ -212,7 +206,7 @@ export default function BackendWorkBoardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="!bg-amber-500/10 !text-amber-400 !border-amber-500/20 hover:!bg-amber-500/20"
+                  className="!bg-amber-50 !text-amber-600 !border-amber-200 hover:!bg-amber-100"
                   onClick={() => handleStatusUpdate("In Progress")}
                 >
                   In Progress
@@ -220,7 +214,7 @@ export default function BackendWorkBoardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="!bg-indigo-500/10 !text-indigo-400 !border-indigo-500/20 hover:!bg-indigo-500/20"
+                  className="!bg-indigo-50 !text-indigo-600 !border-indigo-200 hover:!bg-indigo-100"
                   onClick={() => handleStatusUpdate("Review")}
                 >
                   Review
@@ -228,7 +222,7 @@ export default function BackendWorkBoardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="!bg-emerald-500/10 !text-emerald-400 !border-emerald-500/20 hover:!bg-emerald-500/20"
+                  className="!bg-emerald-50 !text-emerald-600 !border-emerald-200 hover:!bg-emerald-100"
                   onClick={() => handleStatusUpdate("Done")}
                 >
                   Done
@@ -246,7 +240,7 @@ export default function BackendWorkBoardPage() {
                   {selectedTask.logs.map((log, i) => (
                     <div
                       key={i}
-                      className="bg-[#09090f] rounded-lg p-3 text-xs text-gray-300 leading-relaxed"
+                      className="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 leading-relaxed"
                     >
                       {log}
                     </div>

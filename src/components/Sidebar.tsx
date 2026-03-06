@@ -14,8 +14,11 @@ import {
   X,
   LogOut,
   ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+  XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import type { Role } from "@/lib/types";
 
@@ -58,23 +61,29 @@ const navSections: NavSection[] = [
     label: "Client Portal",
     items: [
       { name: "Customer View", href: "/dashboard/portal", icon: LineChart, roles: ["admin", "client"] },
+      { name: "Cancel Services", href: "/dashboard/cancel", icon: XCircle, roles: ["client"] },
     ],
   },
 ];
 
 const roleBadgeColors: Record<Role, string> = {
-  admin: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25",
-  sales: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
-  backend: "bg-amber-500/15 text-amber-400 border-amber-500/25",
-  client: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
-  employee: "bg-pink-500/15 text-pink-400 border-pink-500/25",
-  agent: "bg-violet-500/15 text-violet-400 border-violet-500/25",
-  agency: "bg-orange-500/15 text-orange-400 border-orange-500/25",
+  admin: "bg-indigo-50 text-indigo-600 border-indigo-200",
+  sales: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  backend: "bg-amber-50 text-amber-600 border-amber-200",
+  client: "bg-cyan-50 text-cyan-600 border-cyan-200",
+  employee: "bg-pink-50 text-pink-600 border-pink-200",
+  agent: "bg-violet-50 text-violet-600 border-violet-200",
+  agency: "bg-orange-50 text-orange-600 border-orange-200",
 };
+
+// Context for sidebar collapsed state
+const SidebarContext = createContext({ collapsed: false });
+export const useSidebar = () => useContext(SidebarContext);
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuth();
 
   const role = user?.role || "admin";
@@ -87,27 +96,39 @@ export function Sidebar() {
     }))
     .filter((section) => section.items.length > 0);
 
-  const sidebarContent = (
+  const sidebarContent = (isMobile: boolean) => (
     <>
-      <div className="px-4 pt-4 pb-3 border-b border-[#242433]">
-        <div className="text-lg font-bold font-serif text-gray-100">
-          Launchpad<span className="text-indigo-400">.</span>
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className={`text-lg font-bold font-serif text-gray-900 ${!isMobile && collapsed ? "hidden" : ""}`}>
+            Launchpad<span className="text-indigo-500">.</span>
+          </div>
+          {!isMobile && collapsed && (
+            <div className="text-lg font-bold font-serif text-indigo-500 mx-auto">L</div>
+          )}
+          {isMobile && (
+            <button onClick={() => setMobileOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+              <X size={18} />
+            </button>
+          )}
         </div>
-        <div className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5">
-          Ops Portal
-        </div>
+        {(!collapsed || isMobile) && (
+          <div className="text-[9px] text-gray-400 uppercase tracking-widest mt-0.5">
+            Ops Portal
+          </div>
+        )}
       </div>
 
       {/* User info */}
-      {user && (
-        <div className="px-3.5 pt-3 pb-2 border-b border-[#242433]">
+      {user && (!collapsed || isMobile) && (
+        <div className="px-3.5 pt-3 pb-2 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold shrink-0">
+            <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold shrink-0">
               {user.name.charAt(0)}
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] font-medium truncate">{user.name}</div>
-              <div className="text-[9px] text-gray-500 truncate">{user.email}</div>
+              <div className="text-[11px] font-medium text-gray-800 truncate">{user.name}</div>
+              <div className="text-[9px] text-gray-400 truncate">{user.email}</div>
             </div>
           </div>
           <div className="mt-2">
@@ -118,12 +139,22 @@ export function Sidebar() {
         </div>
       )}
 
+      {user && collapsed && !isMobile && (
+        <div className="px-2 pt-3 pb-2 border-b border-gray-200 flex justify-center">
+          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[11px] font-bold">
+            {user.name.charAt(0)}
+          </div>
+        </div>
+      )}
+
       <nav className="flex-1 overflow-y-auto py-2">
         {visibleSections.map((section) => (
           <div key={section.label} className="px-2.5 pt-3 pb-1">
-            <div className="text-[9px] text-gray-500 uppercase tracking-widest px-2 pb-2 font-semibold">
-              {section.label}
-            </div>
+            {(!collapsed || isMobile) && (
+              <div className="text-[9px] text-gray-400 uppercase tracking-widest px-2 pb-2 font-semibold">
+                {section.label}
+              </div>
+            )}
             {section.items.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -131,14 +162,15 @@ export function Sidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[12.5px] mb-0.5 transition-all border ${
+                  title={collapsed && !isMobile ? item.name : undefined}
+                  className={`flex items-center ${collapsed && !isMobile ? "justify-center" : "gap-2.5"} px-2 py-1.5 rounded-lg text-[12.5px] mb-0.5 transition-all border ${
                     isActive
-                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                      : "text-gray-500 border-transparent hover:bg-[#1a1a26] hover:text-gray-200"
+                      ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                      : "text-gray-500 border-transparent hover:bg-gray-100 hover:text-gray-800"
                   }`}
                 >
                   <item.icon size={14} className={isActive ? "opacity-100" : "opacity-50"} />
-                  {item.name}
+                  {(!collapsed || isMobile) && item.name}
                 </Link>
               );
             })}
@@ -146,58 +178,69 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-[#242433]">
+      <div className="mt-auto border-t border-gray-200">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-2.5 px-5 py-3 text-[12px] text-gray-500 hover:text-red-400 hover:bg-red-500/5 transition-colors cursor-pointer"
+          className={`w-full flex items-center ${collapsed && !isMobile ? "justify-center" : "gap-2.5"} px-5 py-3 text-[12px] text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer`}
         >
           <LogOut size={13} />
-          Sign Out
+          {(!collapsed || isMobile) && "Sign Out"}
         </button>
-        <div className="px-3.5 py-2 border-t border-[#242433]">
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-            <MapPin size={10} />
-            Boost with Launchpad
+        {(!collapsed || isMobile) && (
+          <div className="px-3.5 py-2 border-t border-gray-200">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+              <MapPin size={10} />
+              Boost with Launchpad
+            </div>
+            <div className="text-[9px] text-gray-400 font-mono mt-0.5">
+              Palm Beach Gardens, FL
+            </div>
           </div>
-          <div className="text-[9px] text-gray-600 font-mono mt-0.5">
-            Palm Beach Gardens, FL
-          </div>
-        </div>
+        )}
       </div>
     </>
   );
 
   return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        className="lg:hidden fixed top-3 left-3 z-50 bg-[#111118] border border-[#242433] rounded-lg p-2 text-gray-400"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
+    <SidebarContext.Provider value={{ collapsed }}>
+      {/* Mobile toggle — only show hamburger when sidebar is closed */}
+      {!mobileOpen && (
+        <button
+          className="lg:hidden fixed top-2.5 left-3 z-50 bg-white border border-gray-200 rounded-lg p-1.5 text-gray-500 shadow-sm"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu size={18} />
+        </button>
+      )}
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/60 z-30"
+          className="lg:hidden fixed inset-0 bg-black/30 z-30"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar - mobile */}
       <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-40 w-[220px] bg-[#111118] border-r border-[#242433] flex flex-col transform transition-transform ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-40 w-[220px] bg-white border-r border-gray-200 flex flex-col transform transition-transform ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {sidebarContent}
+        {sidebarContent(true)}
       </aside>
 
       {/* Sidebar - desktop */}
-      <aside className="hidden lg:flex w-[220px] min-w-[220px] bg-[#111118] border-r border-[#242433] flex-col h-screen sticky top-0">
-        {sidebarContent}
+      <aside className={`hidden lg:flex ${collapsed ? "w-[64px] min-w-[64px]" : "w-[220px] min-w-[220px]"} bg-white border-r border-gray-200 flex-col h-screen sticky top-0 transition-all duration-200 relative z-40`}>
+        {sidebarContent(false)}
+        {/* Collapse toggle button */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="absolute -right-3 top-6 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm cursor-pointer z-10"
+        >
+          {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
       </aside>
-    </>
+    </SidebarContext.Provider>
   );
 }

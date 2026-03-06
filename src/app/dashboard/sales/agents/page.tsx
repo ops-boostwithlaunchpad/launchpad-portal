@@ -12,18 +12,6 @@ import { FormGroup, FormRow, Input, Select, Checkbox } from "@/components/FormGr
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Agent, Agency, Deal, Client } from "@/lib/types";
-import {
-  UserCheck as UserCheckIcon,
-  DollarSign,
-  Percent,
-  ShieldCheck,
-  Trash2,
-  Pencil,
-  ChevronRight,
-  ChevronDown,
-  ChevronLeft,
-  UserPlus,
-} from "lucide-react";
 
 const PER_PAGE = 10;
 
@@ -203,55 +191,55 @@ export default function AgentsPage() {
 
       <div className="p-4 md:p-6">
         <StatsRow>
-          <StatCard value={String(agents.length)} label="Total Agents" icon={UserCheckIcon} iconColor="blue" />
-          <StatCard value={`$${totalMRR.toLocaleString()}`} label="Total MRR" valueColor="green" icon={DollarSign} />
-          <StatCard value={`${avgCommission}%`} label="Avg Commission" icon={Percent} iconColor="orange" />
-          <StatCard value={String(activeCount)} label="Active Agents" icon={ShieldCheck} iconColor="teal" />
+          <StatCard value={String(agents.length)} label="Total Agents" />
+          <StatCard value={`$${totalMRR.toLocaleString()}`} label="Total MRR" valueColor="green" />
+          <StatCard value={`${avgCommission}%`} label="Avg Commission" />
+          <StatCard value={String(activeCount)} label="Active Agents" />
         </StatsRow>
 
         <Card title="All Agents">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-[12.5px]">
-              <thead><tr>{headers.map((h) => <th key={h} className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-[#242433] font-semibold">{h}</th>)}</tr></thead>
+              <thead><tr>{headers.map((h) => <th key={h} className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-gray-200 font-semibold">{h}</th>)}</tr></thead>
               <tbody>
                 {paginated.map((ag) => {
                   const isExp = expanded.has(ag.id);
                   return (
                     <Fragment key={ag.id}>
-                      <tr className="border-b border-[#242433]/60 hover:bg-[#1a1a26] transition-colors cursor-pointer" onClick={() => toggleExpand(ag.id)}>
-                        <td className="px-3 py-2.5 w-8">{isExp ? <ChevronDown size={14} className="text-indigo-400" /> : <ChevronRight size={14} className="text-gray-500" />}</td>
-                        <td className="px-3 py-2.5"><div className="flex items-center gap-2"><Avatar name={ag.name} /><span className="font-medium text-gray-200">{ag.name}</span></div></td>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleExpand(ag.id)}>
+                        <td className="px-3 py-2.5 w-8"><span className={isExp ? "text-indigo-600" : "text-gray-500"}>{isExp ? "▼" : "▶"}</span></td>
+                        <td className="px-3 py-2.5"><div className="flex items-center gap-2"><Avatar name={ag.name} /><span className="font-medium text-gray-800">{ag.name}</span></div></td>
                         <td className="px-3 py-2.5 text-gray-500">{ag.agency}</td>
-                        <td className="px-3 py-2.5 text-gray-300">{ag.dealCount}</td>
-                        <td className="px-3 py-2.5 text-emerald-400 font-mono font-semibold">${ag.computedMRR.toLocaleString()}</td>
-                        <td className="px-3 py-2.5 text-gray-300">{ag.commission}%</td>
-                        <td className="px-3 py-2.5 text-amber-400 font-mono font-semibold">${ag.commissionAmt.toLocaleString()}</td>
+                        <td className="px-3 py-2.5 text-gray-700">{ag.dealCount}</td>
+                        <td className="px-3 py-2.5 text-emerald-600 font-mono font-semibold">${ag.computedMRR.toLocaleString()}</td>
+                        <td className="px-3 py-2.5 text-gray-700">{ag.commission}%</td>
+                        <td className="px-3 py-2.5 text-amber-600 font-mono font-semibold">${ag.commissionAmt.toLocaleString()}</td>
                         <td className="px-3 py-2.5"><StatusBadge status={ag.status} /></td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => openAssignClient(ag.id)} className="text-gray-600 hover:text-emerald-400 transition-colors p-1" title="Assign Client"><UserPlus size={14} /></button>
-                            <button onClick={() => openEdit(ag)} className="text-gray-600 hover:text-indigo-400 transition-colors p-1"><Pencil size={14} /></button>
-                            <button onClick={() => setDeleteTarget(ag)} className="text-gray-500 hover:text-red-400 transition-colors p-1"><Trash2 size={14} /></button>
+                            <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1 text-[12px]" title="Assign Client">Assign</button>
+                            <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-[12px]">Edit</button>
+                            <button onClick={() => setDeleteTarget(ag)} className="text-gray-500 hover:text-red-600 transition-colors p-1 text-[12px]">Delete</button>
                           </div>
                         </td>
                       </tr>
                       {isExp && (
-                        <tr><td colSpan={9} className="bg-[#0d0d14] px-6 py-4 border-b border-[#242433]/60">
+                        <tr><td colSpan={9} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                           {ag.clients.length === 0 ? <div className="text-gray-500 text-xs py-2">No clients assigned to this agent.</div> : (
                             <div className="space-y-3">
                               <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Clients handled by {ag.name}</div>
                               <table className="w-full text-[11.5px]">
-                                <thead><tr>{["Client", "Industry", "Services", "Stage", "MRR", "Status"].map((h) => <th key={h} className="text-left px-2 py-1.5 text-[9px] text-gray-500 uppercase tracking-wider font-semibold border-b border-[#242433]/40">{h}</th>)}</tr></thead>
+                                <thead><tr>{["Client", "Industry", "Services", "Stage", "MRR", "Status"].map((h) => <th key={h} className="text-left px-2 py-1.5 text-[9px] text-gray-500 uppercase tracking-wider font-semibold border-b border-gray-100">{h}</th>)}</tr></thead>
                                 <tbody>
                                   {ag.clients.map((c) => (
-                                    <tr key={c.id} className="border-b border-[#242433]/30">
-                                      <td className="px-2 py-2"><div className="flex items-center gap-2"><Avatar name={c.name} /><span className="font-medium text-gray-200">{c.name}</span></div></td>
-                                      <td className="px-2 py-2 text-gray-400">{c.industry}</td>
+                                    <tr key={c.id} className="border-b border-gray-100">
+                                      <td className="px-2 py-2"><div className="flex items-center gap-2"><Avatar name={c.name} /><span className="font-medium text-gray-800">{c.name}</span></div></td>
+                                      <td className="px-2 py-2 text-gray-500">{c.industry}</td>
                                       <td className="px-2 py-2"><ServiceBadges services={c.dealServices} /></td>
                                       <td className="px-2 py-2">
-                                        {c.dealStage && <span className={`text-[9px] px-1.5 py-0.5 rounded border ${c.dealStage === "Won" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : c.dealStage === "Lost" ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"}`}>{c.dealStage}</span>}
+                                        {c.dealStage && <span className={`text-[9px] px-1.5 py-0.5 rounded border ${c.dealStage === "Won" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : c.dealStage === "Lost" ? "bg-red-50 text-red-600 border-red-200" : "bg-yellow-50 text-yellow-600 border-yellow-200"}`}>{c.dealStage}</span>}
                                       </td>
-                                      <td className="px-2 py-2 text-emerald-400 font-mono font-semibold">${c.mrr.toLocaleString()}</td>
+                                      <td className="px-2 py-2 text-emerald-600 font-mono font-semibold">${c.mrr.toLocaleString()}</td>
                                       <td className="px-2 py-2"><StatusBadge status={c.status} /></td>
                                     </tr>
                                   ))}
@@ -269,14 +257,14 @@ export default function AgentsPage() {
             </table>
           </div>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#242433]">
+            <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-200">
               <div className="text-[11px] text-gray-500">Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}</div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="p-1.5 rounded hover:bg-[#1a1a26] text-gray-400 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="p-1.5 rounded hover:bg-gray-50 text-gray-500 disabled:opacity-30">‹</button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button key={p} onClick={() => setPage(p)} className={`w-7 h-7 rounded text-[11px] font-medium ${p === page ? "bg-indigo-500 text-white" : "text-gray-400 hover:bg-[#1a1a26]"}`}>{p}</button>
+                  <button key={p} onClick={() => setPage(p)} className={`w-7 h-7 rounded text-[11px] font-medium ${p === page ? "bg-indigo-500 text-white" : "text-gray-500 hover:bg-gray-50"}`}>{p}</button>
                 ))}
-                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="p-1.5 rounded hover:bg-[#1a1a26] text-gray-400 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="p-1.5 rounded hover:bg-gray-50 text-gray-500 disabled:opacity-30">›</button>
               </div>
             </div>
           )}

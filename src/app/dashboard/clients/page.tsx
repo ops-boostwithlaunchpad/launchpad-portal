@@ -31,7 +31,6 @@ import {
   SVC_BADGE,
   TEAMS,
 } from "@/lib/types";
-import { Trash2, Pencil, Users as UsersIcon, DollarSign, Layers, ThumbsUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
@@ -286,7 +285,7 @@ export default function ClientsPage() {
         <div className="flex items-center gap-2.5">
           <Avatar name={c.name} />
           <div>
-            <div className="font-medium text-gray-100">{c.name}</div>
+            <div className="font-medium text-gray-900">{c.name}</div>
             <div className="text-[10px] text-gray-500">{c.website}</div>
           </div>
         </div>
@@ -296,7 +295,7 @@ export default function ClientsPage() {
       key: "industry",
       header: "Industry",
       render: (c: Client) => (
-        <span className="text-gray-400">{c.industry}</span>
+        <span className="text-gray-500">{c.industry}</span>
       ),
     },
     {
@@ -308,7 +307,7 @@ export default function ClientsPage() {
       key: "mrr",
       header: "MRR",
       render: (c: Client) => (
-        <span className="text-emerald-400 font-mono">
+        <span className="text-emerald-600 font-mono">
           ${c.mrr.toLocaleString()}
         </span>
       ),
@@ -317,14 +316,14 @@ export default function ClientsPage() {
       key: "since",
       header: "Since",
       render: (c: Client) => (
-        <span className="font-mono text-gray-400">{c.start}</span>
+        <span className="font-mono text-gray-500">{c.start}</span>
       ),
     },
     {
       key: "rep",
       header: "Rep",
       render: (c: Client) => (
-        <span className="text-gray-400">{c.rep}</span>
+        <span className="text-gray-500">{c.rep}</span>
       ),
     },
     {
@@ -339,15 +338,15 @@ export default function ClientsPage() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEdit(c)}
-            className="text-gray-600 hover:text-indigo-400 transition-colors p-1 cursor-pointer"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 cursor-pointer text-xs"
           >
-            <Pencil size={14} />
+            Edit
           </button>
           <button
             onClick={() => setDeleteTarget(c)}
-            className="text-gray-600 hover:text-red-400 transition-colors p-1 cursor-pointer"
+            className="text-gray-400 hover:text-red-600 transition-colors p-1 cursor-pointer text-xs"
           >
-            <Trash2 size={14} />
+            Delete
           </button>
         </div>
       ),
@@ -383,17 +382,14 @@ export default function ClientsPage() {
               <StatCard
                 value={String(activeClients.length)}
                 label="Active Clients"
-                icon={UsersIcon}
-                iconColor="blue"
-              />
+                             />
               <StatCard
                 value={`$${totalMrr.toLocaleString()}`}
                 label="MRR"
                 valueColor="green"
-                icon={DollarSign}
               />
-              <StatCard value="5" label="Industries" icon={Layers} iconColor="purple" />
-              <StatCard value="97%" label="Satisfaction" icon={ThumbsUp} iconColor="teal" />
+              <StatCard value="5" label="Industries" />
+              <StatCard value="97%" label="Satisfaction" />
             </StatsRow>
 
             <Card title="Client Roster" actions={null}>
@@ -402,7 +398,7 @@ export default function ClientsPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+                  className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12px] text-gray-700 outline-none focus:border-indigo-500"
                 >
                   <option value="">All Statuses</option>
                   <option value="Active">Active</option>
@@ -412,7 +408,7 @@ export default function ClientsPage() {
                 <select
                   value={filterService}
                   onChange={(e) => setFilterService(e.target.value)}
-                  className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+                  className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12px] text-gray-700 outline-none focus:border-indigo-500"
                 >
                   <option value="">All Services</option>
                   {SERVICE_OPTIONS.map((svc) => (
@@ -425,7 +421,7 @@ export default function ClientsPage() {
               </div>
               <DataTable columns={clientColumns} data={paginatedClients} />
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#242433]">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
                   <span className="text-[11px] text-gray-500">
                     Page {page} of {totalPages}
                   </span>
@@ -433,16 +429,16 @@ export default function ClientsPage() {
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 cursor-pointer"
                     >
-                      <ChevronLeft size={14} />
+                      &#8249;
                     </button>
                     <button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                      className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 cursor-pointer"
                     >
-                      <ChevronRight size={14} />
+                      &#8250;
                     </button>
                   </div>
                 </div>
@@ -458,7 +454,7 @@ export default function ClientsPage() {
               <Card key={client.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900">
                       {client.name}
                     </h3>
                     <p className="text-[11px] text-gray-500 mt-0.5">
@@ -472,7 +468,7 @@ export default function ClientsPage() {
                   {client.services.map((svc) => (
                     <div
                       key={svc}
-                      className="bg-[#09090f] border border-[#242433] rounded-lg p-3"
+                      className="bg-gray-50 border border-gray-200 rounded-lg p-3"
                     >
                       <div className="mb-1.5">
                         <ServiceBadge service={svc} />
@@ -574,7 +570,7 @@ export default function ClientsPage() {
             {/* Right: Recently Sent */}
             <Card title="Recently Sent">
               {sentTasks.length === 0 ? (
-                <p className="text-gray-600 text-xs py-6 text-center">
+                <p className="text-gray-400 text-xs py-6 text-center">
                   No tasks sent yet.
                 </p>
               ) : (
@@ -582,10 +578,10 @@ export default function ClientsPage() {
                   {sentTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="bg-[#09090f] border border-[#242433] rounded-lg p-3"
+                      className="bg-gray-50 border border-gray-200 rounded-lg p-3"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[12.5px] font-semibold text-gray-100">
+                        <span className="text-[12.5px] font-semibold text-gray-900">
                           {task.client}
                         </span>
                         <PrioBadge priority={task.priority} />
@@ -594,7 +590,7 @@ export default function ClientsPage() {
                         {task.service} &middot; {task.team}
                       </p>
                       {task.due && (
-                        <p className="text-[10px] text-gray-600 font-mono mt-1">
+                        <p className="text-[10px] text-gray-400 font-mono mt-1">
                           Due: {task.due}
                         </p>
                       )}

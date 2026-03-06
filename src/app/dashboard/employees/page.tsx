@@ -13,10 +13,6 @@ import { Avatar } from "@/components/Avatar";
 import { StatusBadge, PrioBadge, ServiceBadge } from "@/components/Badge";
 import { DEPARTMENTS } from "@/lib/types";
 import type { Task, Client } from "@/lib/types";
-import {
-  Users, UserPlus, Building2, Shield, Trash2, Pencil, Eye, EyeOff,
-  ClipboardList, X, ChevronLeft, ChevronRight,
-} from "lucide-react";
 
 interface EmployeeRow {
   id: number;
@@ -28,13 +24,13 @@ interface EmployeeRow {
 }
 
 const deptBadgeColors: Record<string, string> = {
-  "Local SEO": "bg-green-500/15 text-green-400 border-green-500/25",
-  "AI SEO": "bg-teal-500/15 text-teal-400 border-teal-500/25",
-  "Local Service Ads": "bg-orange-500/15 text-orange-400 border-orange-500/25",
-  "Google Ads": "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",
-  "Meta Ads": "bg-purple-500/15 text-purple-400 border-purple-500/25",
-  Automation: "bg-blue-500/15 text-blue-400 border-blue-500/25",
-  Developer: "bg-pink-500/15 text-pink-400 border-pink-500/25",
+  "Local SEO": "bg-green-50 text-green-600 border-green-200",
+  "AI SEO": "bg-teal-50 text-teal-600 border-teal-200",
+  "Local Service Ads": "bg-orange-50 text-orange-600 border-orange-200",
+  "Google Ads": "bg-yellow-50 text-yellow-600 border-yellow-200",
+  "Meta Ads": "bg-purple-50 text-purple-600 border-purple-200",
+  Automation: "bg-blue-50 text-blue-600 border-blue-200",
+  Developer: "bg-pink-50 text-pink-600 border-pink-200",
 };
 
 export default function EmployeesPage() {
@@ -258,7 +254,7 @@ export default function EmployeesPage() {
         <div className="flex items-center gap-2">
           <Avatar name={emp.name} />
           <div>
-            <div className="font-medium text-gray-200">{emp.name}</div>
+            <div className="font-medium text-gray-800">{emp.name}</div>
             <div className="text-[11px] text-gray-500">{emp.email}</div>
           </div>
         </div>
@@ -270,7 +266,7 @@ export default function EmployeesPage() {
       render: (emp: EmployeeRow) => (
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-            deptBadgeColors[emp.department] || "bg-gray-500/15 text-gray-400 border-gray-500/25"
+            deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"
           }`}
         >
           {emp.department}
@@ -297,22 +293,22 @@ export default function EmployeesPage() {
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); openAssignModal(emp); }}
-            className="text-gray-600 hover:text-emerald-400 transition-colors p-1"
+            className="text-gray-400 hover:text-emerald-600 transition-colors p-1 text-xs"
             title="Assign Task"
           >
-            <ClipboardList size={14} />
+            Assign
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
-            className="text-gray-600 hover:text-indigo-400 transition-colors p-1"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-xs"
           >
-            <Pencil size={14} />
+            Edit
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(emp); }}
-            className="text-gray-500 hover:text-red-400 transition-colors p-1"
+            className="text-gray-500 hover:text-red-600 transition-colors p-1 text-xs"
           >
-            <Trash2 size={14} />
+            Delete
           </button>
         </div>
       ),
@@ -336,10 +332,10 @@ export default function EmployeesPage() {
 
       <div className="p-4 md:p-6">
         <StatsRow>
-          <StatCard value={String(employees.length)} label="Total Employees" icon={Users} iconColor="blue" />
-          <StatCard value={String(uniqueDepts.size)} label="Departments" icon={Building2} iconColor="teal" />
-          <StatCard value="Active" label="All Status" icon={Shield} iconColor="green" />
-          <StatCard value="Employee" label="Role Type" icon={UserPlus} iconColor="orange" />
+          <StatCard value={String(employees.length)} label="Total Employees" />
+          <StatCard value={String(uniqueDepts.size)} label="Departments" />
+          <StatCard value="Active" label="All Status" />
+          <StatCard value="Employee" label="Role Type" />
         </StatsRow>
 
         <Card title="All Employees">
@@ -348,7 +344,7 @@ export default function EmployeesPage() {
             <select
               value={filterDept}
               onChange={(e) => setFilterDept(e.target.value)}
-              className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+              className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-[12px] text-gray-700 outline-none focus:border-indigo-500"
             >
               <option value="">All Departments</option>
               {DEPARTMENTS.map((d) => (
@@ -361,7 +357,7 @@ export default function EmployeesPage() {
           </div>
           <DataTable columns={columns} data={paginatedEmployees} onRowClick={openEmployeeTasks} />
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#242433]">
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
               <span className="text-[11px] text-gray-500">
                 Page {page} of {totalPages}
               </span>
@@ -369,16 +365,16 @@ export default function EmployeesPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 cursor-pointer"
                 >
-                  <ChevronLeft size={14} />
+                  &#8249;
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 cursor-pointer"
                 >
-                  <ChevronRight size={14} />
+                  &#8250;
                 </button>
               </div>
             </div>
@@ -412,7 +408,7 @@ export default function EmployeesPage() {
         }
       >
         {formError && (
-          <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[12px]">
+          <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-[12px]">
             {formError}
           </div>
         )}
@@ -445,9 +441,9 @@ export default function EmployeesPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </FormGroup>
@@ -507,22 +503,22 @@ export default function EmployeesPage() {
                     onClick={() => setSelectedTaskId(task.id)}
                     className={`w-full text-left p-3 rounded-lg border transition-colors ${
                       selectedTaskId === task.id
-                        ? "border-indigo-500/50 bg-indigo-500/10"
-                        : "border-[#242433] bg-[#0d0d14] hover:border-[#363648]"
+                        ? "border-indigo-300 bg-indigo-50"
+                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <ServiceBadge service={task.service} />
                       <PrioBadge priority={task.priority} />
                     </div>
-                    <div className="text-[11px] text-gray-400 mt-1">
+                    <div className="text-[11px] text-gray-500 mt-1">
                       Team: {task.team}
                     </div>
                     <div className="text-[11px] text-gray-500 mt-0.5">
                       Due: {task.due}
                     </div>
                     {task.notes && (
-                      <div className="text-[11px] text-gray-600 mt-1 truncate">
+                      <div className="text-[11px] text-gray-400 mt-1 truncate">
                         {task.notes}
                       </div>
                     )}
@@ -554,7 +550,7 @@ export default function EmployeesPage() {
 
           return (
             <>
-              <div className="flex gap-0.5 bg-[#09090f] border border-[#242433] rounded-lg p-0.5 w-fit mb-3 overflow-x-auto max-w-full">
+              <div className="flex gap-0.5 bg-gray-50 border border-gray-200 rounded-lg p-0.5 w-fit mb-3 overflow-x-auto max-w-full">
                 {([
                   { key: "Queue", label: "Queue", count: queueCount },
                   { key: "Progress", label: "Progress", count: progressCount },
@@ -566,12 +562,12 @@ export default function EmployeesPage() {
                     className={`px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
                       empTaskTab === tab.key
                         ? "bg-indigo-500 text-white font-semibold"
-                        : "text-gray-500 hover:text-gray-200"
+                        : "text-gray-500 hover:text-gray-800"
                     }`}
                   >
                     {tab.label}
                     <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold ${
-                      empTaskTab === tab.key ? "bg-white/20 text-white" : "bg-[#242433] text-gray-400"
+                      empTaskTab === tab.key ? "bg-white/80 text-white" : "bg-gray-200 text-gray-500"
                     }`}>
                       {tab.count}
                     </span>
@@ -588,10 +584,10 @@ export default function EmployeesPage() {
                   {filtered.map((task) => (
                     <div
                       key={task.id}
-                      className="p-3 rounded-lg border border-[#242433] bg-[#0d0d14]"
+                      className="p-3 rounded-lg border border-gray-200 bg-gray-50"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[12px] font-medium text-gray-200">{task.client}</span>
+                        <span className="text-[12px] font-medium text-gray-800">{task.client}</span>
                         <StatusBadge status={task.status} />
                       </div>
                       <div className="flex items-center gap-2 mb-1">

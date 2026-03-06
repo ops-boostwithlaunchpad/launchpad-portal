@@ -1,14 +1,14 @@
 "use client";
 
 const colorMap: Record<string, string> = {
-  green: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  blue: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-  yellow: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  red: "bg-red-500/10 text-red-400 border-red-500/20",
-  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  gray: "bg-white/5 text-gray-400 border-white/10",
-  teal: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  purple: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  blue: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  yellow: "bg-amber-50 text-amber-700 border-amber-200",
+  red: "bg-red-50 text-red-700 border-red-200",
+  orange: "bg-orange-50 text-orange-700 border-orange-200",
+  gray: "bg-gray-100 text-gray-600 border-gray-200",
+  teal: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  purple: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 const stageBadge: Record<string, string> = {

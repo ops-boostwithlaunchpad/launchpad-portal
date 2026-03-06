@@ -25,7 +25,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full bg-[#09090f] border border-[#242433] rounded-lg px-3 py-2 text-gray-200 text-[12.5px] outline-none transition-colors focus:border-indigo-500 placeholder:text-gray-600 ${props.className || ""}`}
+      className={`w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors focus:border-indigo-500 placeholder:text-gray-400 ${props.className || ""}`}
     />
   );
 }
@@ -34,7 +34,7 @@ export function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSe
   return (
     <select
       {...props}
-      className={`w-full bg-[#09090f] border border-[#242433] rounded-lg px-3 py-2 text-gray-200 text-[12.5px] outline-none transition-colors focus:border-indigo-500 ${props.className || ""}`}
+      className={`w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors focus:border-indigo-500 ${props.className || ""}`}
     >
       {children}
     </select>
@@ -45,7 +45,7 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   return (
     <textarea
       {...props}
-      className={`w-full bg-[#09090f] border border-[#242433] rounded-lg px-3 py-2 text-gray-200 text-[12.5px] outline-none transition-colors focus:border-indigo-500 resize-y min-h-[70px] placeholder:text-gray-600 ${props.className || ""}`}
+      className={`w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors focus:border-indigo-500 resize-y min-h-[70px] placeholder:text-gray-400 ${props.className || ""}`}
     />
   );
 }
@@ -55,7 +55,7 @@ export function Checkbox({
   ...props
 }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="flex items-center gap-1.5 text-[11.5px] cursor-pointer text-gray-200">
+    <label className="flex items-center gap-1.5 text-[11.5px] cursor-pointer text-gray-700">
       <input type="checkbox" {...props} className="accent-indigo-500" />
       {label}
     </label>

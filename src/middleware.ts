@@ -11,7 +11,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   sales: ["/dashboard/sales", "/dashboard/clients"],
   backend: ["/dashboard/backend", "/dashboard/clients"],
   employee: ["/dashboard/backend", "/dashboard/clients", "/dashboard/my-tasks"],
-  client: ["/dashboard/portal"],
+  client: ["/dashboard/portal", "/dashboard/cancel"],
   agent: ["/dashboard/sales", "/dashboard/clients"],
   agency: ["/dashboard/sales", "/dashboard/clients"],
 };

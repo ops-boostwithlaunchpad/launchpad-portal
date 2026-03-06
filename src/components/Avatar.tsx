@@ -1,13 +1,13 @@
 "use client";
 
 const bgColors = [
-  "bg-indigo-500/20 text-indigo-400",
-  "bg-emerald-500/20 text-emerald-400",
-  "bg-amber-500/20 text-amber-400",
-  "bg-cyan-500/20 text-cyan-400",
-  "bg-violet-500/20 text-violet-400",
-  "bg-rose-500/20 text-rose-400",
-  "bg-orange-500/20 text-orange-400",
+  "bg-indigo-100 text-indigo-600",
+  "bg-emerald-100 text-emerald-600",
+  "bg-amber-100 text-amber-600",
+  "bg-cyan-100 text-cyan-600",
+  "bg-violet-100 text-violet-600",
+  "bg-rose-100 text-rose-600",
+  "bg-orange-100 text-orange-600",
 ];
 
 function getColor(name: string) {
