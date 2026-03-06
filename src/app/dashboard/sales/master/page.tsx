@@ -12,6 +12,7 @@ import { FormGroup, FormRow, Input, Select, Checkbox } from "@/components/FormGr
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Deal, INDUSTRIES, SERVICE_OPTIONS } from "@/lib/types";
+import { Pencil, Trash2 } from "lucide-react";
 
 const STAGES: Deal["stage"][] = ["Prospect", "Proposal", "Negotiation", "Won", "Lost"];
 
@@ -176,20 +177,22 @@ export default function SalesMasterPage() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: "",
       render: (d: Deal) => (
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEdit(d)}
-            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-[12px]"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5"
+            title="Edit"
           >
-            Edit
+            <Pencil size={13} />
           </button>
           <button
             onClick={() => setDeleteTarget(d)}
-            className="text-gray-400 hover:text-red-600 transition-colors p-1 text-[12px]"
+            className="text-gray-400 hover:text-red-600 transition-colors p-1.5"
+            title="Delete"
           >
-            Delete
+            <Trash2 size={13} />
           </button>
         </div>
       ),
@@ -256,7 +259,50 @@ export default function SalesMasterPage() {
 
         {/* table */}
         <Card title="All Deals">
-          <DataTable columns={columns} data={filtered} />
+          <DataTable
+            columns={columns}
+            data={filtered}
+            mobileCard={(d, i) => (
+              <div
+                key={i}
+                className="border border-gray-200 rounded-lg p-3 bg-white"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar name={d.client} size="sm" />
+                    <span className="font-medium text-[12.5px] text-gray-800">{d.client}</span>
+                  </div>
+                  <StageBadge stage={d.stage} />
+                </div>
+                <div className="text-[11px] text-gray-500 mb-1.5">{d.industry}</div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] text-gray-500">{d.agent}</span>
+                  <span className="text-emerald-600 font-mono text-[12px] font-medium">
+                    ${d.mrr.toLocaleString()}/mo
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <ServiceBadges services={d.services} />
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <button
+                      onClick={() => openEdit(d)}
+                      className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5"
+                      title="Edit"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(d)}
+                      className="text-gray-400 hover:text-red-600 transition-colors p-1.5"
+                      title="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          />
         </Card>
       </div>
 

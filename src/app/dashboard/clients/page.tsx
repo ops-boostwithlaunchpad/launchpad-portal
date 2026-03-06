@@ -31,6 +31,7 @@ import {
   SVC_BADGE,
   TEAMS,
 } from "@/lib/types";
+import { Pencil, Trash2 } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
@@ -335,18 +336,20 @@ export default function ClientsPage() {
       key: "actions",
       header: "",
       render: (c: Client) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={() => openEdit(c)}
-            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 cursor-pointer text-xs"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5 cursor-pointer"
+            title="Edit"
           >
-            Edit
+            <Pencil size={13} />
           </button>
           <button
             onClick={() => setDeleteTarget(c)}
-            className="text-gray-400 hover:text-red-600 transition-colors p-1 cursor-pointer text-xs"
+            className="text-gray-400 hover:text-red-600 transition-colors p-1.5 cursor-pointer"
+            title="Delete"
           >
-            Delete
+            <Trash2 size={13} />
           </button>
         </div>
       ),
@@ -419,7 +422,36 @@ export default function ClientsPage() {
                   {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
                 </span>
               </div>
-              <DataTable columns={clientColumns} data={paginatedClients} />
+              <DataTable
+                columns={clientColumns}
+                data={paginatedClients}
+                mobileCard={(c, i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-3 bg-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={c.name} />
+                        <div>
+                          <div className="font-medium text-[12.5px] text-gray-800">{c.name}</div>
+                          <div className="text-[10px] text-gray-500">{c.website}</div>
+                        </div>
+                      </div>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <div className="text-[11px] text-gray-500 mb-1.5">{c.industry}</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] text-gray-500">{c.rep}</span>
+                      <span className="text-emerald-600 font-mono text-[12px] font-medium">${c.mrr.toLocaleString()}/mo</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <ServiceBadges services={c.services} />
+                      <div className="flex items-center gap-0.5 shrink-0 ml-2">
+                        <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                        <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              />
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
                   <span className="text-[11px] text-gray-500">

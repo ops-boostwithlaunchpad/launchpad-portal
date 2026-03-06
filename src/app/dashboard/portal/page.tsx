@@ -242,56 +242,29 @@ export default function CustomerPortalPage() {
           </div>
         </div>
 
-        {/* Tasks Table */}
+        {/* Tasks & Deliverables — cards only */}
         <Card title="All Tasks & Deliverables">
-          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-            <table className="w-full border-collapse text-[12.5px] min-w-[500px]">
-              <thead>
-                <tr>
-                  {["Task", "Service", "Team", "Status", "Due Date"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-gray-200 font-semibold"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {clientTasks.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-3 py-2.5 font-medium">
-                      {t.service} work
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <ServiceBadge service={t.service} />
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-500 text-[11px]">
-                      {t.assignedToName || t.team}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td className="px-3 py-2.5 font-mono text-gray-500">{t.due}</td>
-                  </tr>
-                ))}
-                {clientTasks.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="text-center text-gray-500 py-8 text-xs"
-                    >
-                      No tasks assigned yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {clientTasks.length === 0 ? (
+            <p className="text-center text-gray-400 py-8 text-xs">No tasks assigned yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {clientTasks.map((t) => (
+                <div key={t.id} className="border border-gray-200 rounded-lg p-3 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-[12.5px] text-gray-800">{t.service} work</span>
+                    <StatusBadge status={t.status} />
+                  </div>
+                  <div className="mb-2">
+                    <ServiceBadge service={t.service} />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-gray-500">{t.assignedToName || t.team}</span>
+                    <span className="font-mono text-gray-500">{t.due}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </>

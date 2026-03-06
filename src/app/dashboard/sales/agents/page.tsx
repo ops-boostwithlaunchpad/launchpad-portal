@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { Topbar, SearchInput } from "@/components/Topbar";
 import { StatCard, StatsRow } from "@/components/StatCard";
-import { Card } from "@/components/DataTable";
+import { Card, ViewToggle } from "@/components/DataTable";
 import { StatusBadge, ServiceBadges } from "@/components/Badge";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -12,6 +12,7 @@ import { FormGroup, FormRow, Input, Select, Checkbox } from "@/components/FormGr
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Agent, Agency, Deal, Client } from "@/lib/types";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
 
 const PER_PAGE = 10;
 
@@ -168,6 +169,8 @@ export default function AgentsPage() {
 
   function toggleSvc(s: string) { setAssignServices((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]); }
 
+  const [desktopView, setDesktopView] = useState<"table" | "cards">("table");
+
   const headers = ["", "Agent", "Agency", "Deals", "MRR", "Commission %", "Commission $", "Status", "Actions"];
 
   if (loading) return <><Topbar title="Sales — Agents" /><PageLoader /></>;
@@ -197,8 +200,75 @@ export default function AgentsPage() {
           <StatCard value={String(activeCount)} label="Active Agents" />
         </StatsRow>
 
-        <Card title="All Agents">
-          <div className="overflow-x-auto">
+        <Card title="All Agents" actions={<ViewToggle view={desktopView} onToggle={setDesktopView} />}>
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-2.5">
+            {paginated.length === 0 && <p className="text-center text-gray-400 py-8 text-xs">{search || filterAgency || filterStatus ? "No agents match your filters." : "No agents yet."}</p>}
+            {paginated.map((ag) => (
+              <div key={ag.id} className="border border-gray-200 rounded-lg p-3 bg-white">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar name={ag.name} />
+                    <div>
+                      <div className="font-medium text-[12.5px] text-gray-800">{ag.name}</div>
+                      <div className="text-[10px] text-gray-500">{ag.agency}</div>
+                    </div>
+                  </div>
+                  <StatusBadge status={ag.status} />
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
+                  <div><span className="text-gray-400">Deals</span><div className="text-gray-700 font-medium">{ag.dealCount}</div></div>
+                  <div><span className="text-gray-400">Commission</span><div className="text-gray-700 font-medium">{ag.commission}%</div></div>
+                  <div><span className="text-gray-400">Earned</span><div className="text-amber-600 font-mono font-medium">${ag.commissionAmt.toLocaleString()}</div></div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-emerald-600 font-mono text-[12px] font-medium">${ag.computedMRR.toLocaleString()}/mo</span>
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
+                    <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                    <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop card view */}
+          {desktopView === "cards" && (
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {paginated.length === 0 && <p className="col-span-full text-center text-gray-400 py-8 text-xs">{search || filterAgency || filterStatus ? "No agents match your filters." : "No agents yet."}</p>}
+              {paginated.map((ag) => (
+                <div key={ag.id} className="border border-gray-200 rounded-lg p-3 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Avatar name={ag.name} />
+                      <div>
+                        <div className="font-medium text-[12.5px] text-gray-800">{ag.name}</div>
+                        <div className="text-[10px] text-gray-500">{ag.agency}</div>
+                      </div>
+                    </div>
+                    <StatusBadge status={ag.status} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
+                    <div><span className="text-gray-400">Deals</span><div className="text-gray-700 font-medium">{ag.dealCount}</div></div>
+                    <div><span className="text-gray-400">Commission</span><div className="text-gray-700 font-medium">{ag.commission}%</div></div>
+                    <div><span className="text-gray-400">Earned</span><div className="text-amber-600 font-mono font-medium">${ag.commissionAmt.toLocaleString()}</div></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-600 font-mono text-[12px] font-medium">${ag.computedMRR.toLocaleString()}/mo</span>
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
+                      <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                      <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop table view */}
+          <div className={`overflow-x-auto ${desktopView === "cards" ? "hidden" : "hidden md:block"}`}>
             <table className="w-full border-collapse text-[12.5px]">
               <thead><tr>{headers.map((h) => <th key={h} className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-gray-200 font-semibold">{h}</th>)}</tr></thead>
               <tbody>
@@ -216,10 +286,10 @@ export default function AgentsPage() {
                         <td className="px-3 py-2.5 text-amber-600 font-mono font-semibold">${ag.commissionAmt.toLocaleString()}</td>
                         <td className="px-3 py-2.5"><StatusBadge status={ag.status} /></td>
                         <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1 text-[12px]" title="Assign Client">Assign</button>
-                            <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-[12px]">Edit</button>
-                            <button onClick={() => setDeleteTarget(ag)} className="text-gray-500 hover:text-red-600 transition-colors p-1 text-[12px]">Delete</button>
+                          <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
+                            <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
                           </div>
                         </td>
                       </tr>

@@ -206,10 +206,10 @@ export function Sidebar() {
       {/* Mobile toggle — only show hamburger when sidebar is closed */}
       {!mobileOpen && (
         <button
-          className="lg:hidden fixed top-2.5 left-3 z-50 bg-white border border-gray-200 rounded-lg p-1.5 text-gray-500 shadow-sm"
+          className="lg:hidden fixed top-2.5 left-3 z-50 p-1 text-gray-500 hover:text-gray-700 transition-colors bg-white border border-gray-200 rounded-md"
           onClick={() => setMobileOpen(true)}
         >
-          <Menu size={18} />
+          <Menu size={20} />
         </button>
       )}
 

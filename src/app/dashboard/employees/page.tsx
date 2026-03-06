@@ -13,6 +13,7 @@ import { Avatar } from "@/components/Avatar";
 import { StatusBadge, PrioBadge, ServiceBadge } from "@/components/Badge";
 import { DEPARTMENTS } from "@/lib/types";
 import type { Task, Client } from "@/lib/types";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
 
 interface EmployeeRow {
   id: number;
@@ -288,27 +289,29 @@ export default function EmployeesPage() {
     },
     {
       key: "actions",
-      header: "Actions",
+      header: "",
       render: (emp: EmployeeRow) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={(e) => { e.stopPropagation(); openAssignModal(emp); }}
-            className="text-gray-400 hover:text-emerald-600 transition-colors p-1 text-xs"
+            className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5"
             title="Assign Task"
           >
-            Assign
+            <UserPlus size={13} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
-            className="text-gray-400 hover:text-indigo-600 transition-colors p-1 text-xs"
+            className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5"
+            title="Edit"
           >
-            Edit
+            <Pencil size={13} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(emp); }}
-            className="text-gray-500 hover:text-red-600 transition-colors p-1 text-xs"
+            className="text-gray-400 hover:text-red-600 transition-colors p-1.5"
+            title="Delete"
           >
-            Delete
+            <Trash2 size={13} />
           </button>
         </div>
       ),
@@ -355,7 +358,41 @@ export default function EmployeesPage() {
               {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? "s" : ""}
             </span>
           </div>
-          <DataTable columns={columns} data={paginatedEmployees} onRowClick={openEmployeeTasks} />
+          <DataTable
+            columns={columns}
+            data={paginatedEmployees}
+            onRowClick={openEmployeeTasks}
+            mobileCard={(emp, i) => (
+              <div
+                key={i}
+                className="border border-gray-200 rounded-lg p-3 bg-white cursor-pointer"
+                onClick={() => openEmployeeTasks(emp)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar name={emp.name} />
+                    <div>
+                      <div className="font-medium text-[12.5px] text-gray-800">{emp.name}</div>
+                      <div className="text-[10px] text-gray-500">{emp.email}</div>
+                    </div>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
+                    {emp.department}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-gray-500">
+                    Joined {new Date(emp.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                  <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => openAssignModal(emp)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Task"><UserPlus size={13} /></button>
+                    <button onClick={() => openEdit(emp)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                    <button onClick={() => setDeleteTarget(emp)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+              </div>
+            )}
+          />
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
               <span className="text-[11px] text-gray-500">
