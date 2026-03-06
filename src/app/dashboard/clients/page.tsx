@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Topbar, Tabs } from "@/components/Topbar";
+import { useState, useEffect, useMemo } from "react";
+import { Topbar, Tabs, SearchInput } from "@/components/Topbar";
 import { StatCard, StatsRow } from "@/components/StatCard";
 import { Card, DataTable } from "@/components/DataTable";
 import {
@@ -31,7 +31,7 @@ import {
   SVC_BADGE,
   TEAMS,
 } from "@/lib/types";
-import { Trash2, Pencil, Users as UsersIcon, DollarSign, Layers, ThumbsUp } from "lucide-react";
+import { Trash2, Pencil, Users as UsersIcon, DollarSign, Layers, ThumbsUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
@@ -70,6 +70,13 @@ export default function ClientsPage() {
   const [formRep, setFormRep] = useState("");
   const [formWebsite, setFormWebsite] = useState("");
 
+  // Search, filter & pagination
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterService, setFilterService] = useState("");
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 20;
+
   // Send to backend form state
   const [sendClientId, setSendClientId] = useState("");
   const [sendService, setSendService] = useState("");
@@ -97,6 +104,29 @@ export default function ClientsPage() {
 
   const activeClients = clientsList.filter((c) => c.status === "Active");
   const totalMrr = clientsList.reduce((sum, c) => sum + c.mrr, 0);
+
+  const filteredClients = useMemo(() => {
+    let list = clientsList;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.email.toLowerCase().includes(q) ||
+          c.contact.toLowerCase().includes(q) ||
+          c.industry.toLowerCase().includes(q)
+      );
+    }
+    if (filterStatus) list = list.filter((c) => c.status === filterStatus);
+    if (filterService) list = list.filter((c) => c.services.includes(filterService));
+    return list;
+  }, [clientsList, search, filterStatus, filterService]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / PER_PAGE));
+  const paginatedClients = filteredClients.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [search, filterStatus, filterService]);
 
   function toggleService(svc: string) {
     setFormServices((prev) =>
@@ -367,7 +397,56 @@ export default function ClientsPage() {
             </StatsRow>
 
             <Card title="Client Roster" actions={null}>
-              <DataTable columns={clientColumns} data={clientsList} />
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <SearchInput value={search} onChange={setSearch} placeholder="Search clients..." />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Churned">Churned</option>
+                </select>
+                <select
+                  value={filterService}
+                  onChange={(e) => setFilterService(e.target.value)}
+                  className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+                >
+                  <option value="">All Services</option>
+                  {SERVICE_OPTIONS.map((svc) => (
+                    <option key={svc} value={svc}>{svc}</option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-gray-500 ml-auto">
+                  {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <DataTable columns={clientColumns} data={paginatedClients} />
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#242433]">
+                  <span className="text-[11px] text-gray-500">
+                    Page {page} of {totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </Card>
           </>
         )}

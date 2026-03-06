@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Topbar } from "@/components/Topbar";
+import { useState, useEffect, useMemo } from "react";
+import { Topbar, SearchInput } from "@/components/Topbar";
 import { StatCard, StatsRow } from "@/components/StatCard";
 import { Card, DataTable } from "@/components/DataTable";
 import { Button } from "@/components/Button";
@@ -15,7 +15,7 @@ import { DEPARTMENTS } from "@/lib/types";
 import type { Task, Client } from "@/lib/types";
 import {
   Users, UserPlus, Building2, Shield, Trash2, Pencil, Eye, EyeOff,
-  ClipboardList, X,
+  ClipboardList, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 interface EmployeeRow {
@@ -63,6 +63,12 @@ export default function EmployeesPage() {
   const [assigning, setAssigning] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+  // Search, filter & pagination
+  const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 20;
+
   // Employee tasks viewer modal state
   const [viewTasksEmployee, setViewTasksEmployee] = useState<EmployeeRow | null>(null);
   const [employeeTasks, setEmployeeTasks] = useState<Task[]>([]);
@@ -77,6 +83,24 @@ export default function EmployeesPage() {
   }, []);
 
   const uniqueDepts = new Set(employees.map((e) => e.department));
+
+  const filteredEmployees = useMemo(() => {
+    let list = employees;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (e) => e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q)
+      );
+    }
+    if (filterDept) list = list.filter((e) => e.department === filterDept);
+    return list;
+  }, [employees, search, filterDept]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PER_PAGE));
+  const paginatedEmployees = filteredEmployees.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [search, filterDept]);
 
   function resetForm() {
     setName("");
@@ -319,7 +343,46 @@ export default function EmployeesPage() {
         </StatsRow>
 
         <Card title="All Employees">
-          <DataTable columns={columns} data={employees} onRowClick={openEmployeeTasks} />
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <SearchInput value={search} onChange={setSearch} placeholder="Search employees..." />
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="bg-[#09090f] border border-[#242433] rounded-lg px-2.5 py-1.5 text-[12px] text-gray-300 outline-none focus:border-indigo-500"
+            >
+              <option value="">All Departments</option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <span className="text-[11px] text-gray-500 ml-auto">
+              {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <DataTable columns={columns} data={paginatedEmployees} onRowClick={openEmployeeTasks} />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#242433]">
+              <span className="text-[11px] text-gray-500">
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-1 rounded hover:bg-[#242433] disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 cursor-pointer"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
