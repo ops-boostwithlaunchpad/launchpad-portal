@@ -89,12 +89,12 @@ export default function MyTasksPage() {
       </Topbar>
 
       <div className="p-4 md:p-6">
-        <div className="flex gap-0.5 bg-[#111118] border border-[#242433] rounded-lg p-0.5 w-fit mb-5">
+        <div className="flex gap-0.5 bg-[#111118] border border-[#242433] rounded-lg p-0.5 w-fit mb-5 overflow-x-auto max-w-full">
           {tabsWithCounts.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === tab.key
                   ? "bg-indigo-500 text-white font-semibold"
                   : "text-gray-500 hover:text-gray-200"
@@ -131,7 +131,7 @@ export default function MyTasksPage() {
                   <PrioBadge priority={task.priority} />
                 </div>
 
-                <div className="flex items-center gap-4 text-[11px] text-gray-500 mb-2">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500 mb-2">
                   <span>Team: {task.team}</span>
                   <span>Due: {task.due}</span>
                 </div>

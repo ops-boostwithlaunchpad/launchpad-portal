@@ -15,8 +15,8 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({ columns, data, onRowClick }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[12.5px]">
+    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <table className="w-full border-collapse text-[12.5px] min-w-[600px]">
         <thead>
           <tr>
             {columns.map((col) => (
@@ -66,7 +66,7 @@ export function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#111118] border border-[#242433] rounded-xl p-4">
+    <div className="bg-[#111118] border border-[#242433] rounded-xl p-3 sm:p-4">
       {(title || actions) && (
         <div className="flex items-center justify-between mb-3.5">
           {title && (

@@ -554,7 +554,7 @@ export default function EmployeesPage() {
 
           return (
             <>
-              <div className="flex gap-0.5 bg-[#09090f] border border-[#242433] rounded-lg p-0.5 w-fit mb-3">
+              <div className="flex gap-0.5 bg-[#09090f] border border-[#242433] rounded-lg p-0.5 w-fit mb-3 overflow-x-auto max-w-full">
                 {([
                   { key: "Queue", label: "Queue", count: queueCount },
                   { key: "Progress", label: "Progress", count: progressCount },
@@ -563,7 +563,7 @@ export default function EmployeesPage() {
                   <button
                     key={tab.key}
                     onClick={() => setEmpTaskTab(tab.key)}
-                    className={`px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-medium cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
                       empTaskTab === tab.key
                         ? "bg-indigo-500 text-white font-semibold"
                         : "text-gray-500 hover:text-gray-200"

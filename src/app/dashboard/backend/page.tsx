@@ -163,7 +163,7 @@ export default function BackendWorkBoardPage() {
             <div className="h-px bg-[#242433]" />
 
             {/* 3-column grid: Team, Priority, Due */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
                   Team

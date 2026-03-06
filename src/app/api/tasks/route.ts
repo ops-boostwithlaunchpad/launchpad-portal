@@ -138,6 +138,25 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Trigger n8n webhook when task is marked complete
+    if (statusChanged && status === "Done") {
+      const currentUser = await getCurrentUser().catch(() => null);
+      fetch("https://n8n.launchpadautomation.com/webhook-test/mark-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: task.id,
+          client: task.client,
+          service: task.service,
+          team: task.team,
+          assignedTo: task.assignedTo,
+          assignedToName: task.assignedToName,
+          completedBy: currentUser?.name || "Unknown",
+          completedAt: new Date().toISOString(),
+        }),
+      }).catch(() => {}); // fire-and-forget, don't block response
+    }
+
     return NextResponse.json(updated);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

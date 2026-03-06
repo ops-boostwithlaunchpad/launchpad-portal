@@ -10,9 +10,9 @@ interface TopbarProps {
 
 export function Topbar({ title, children }: TopbarProps) {
   return (
-    <div className="bg-[#111118] border-b border-[#242433] px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-      <h1 className="text-sm font-semibold pl-10 lg:pl-0">{title}</h1>
-      <div className="flex items-center gap-2">
+    <div className="bg-[#111118] border-b border-[#242433] px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 sticky top-0 z-10">
+      <h1 className="text-sm font-semibold pl-10 lg:pl-0 mr-auto">{title}</h1>
+      <div className="flex items-center gap-2 flex-wrap">
         {children}
         <NotificationBell />
       </div>
@@ -37,7 +37,7 @@ export function SearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-[140px] md:w-[180px] bg-[#09090f] border border-[#242433] rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-gray-200 outline-none focus:border-indigo-500 placeholder:text-gray-600"
+        className="w-full sm:w-[140px] md:w-[180px] bg-[#09090f] border border-[#242433] rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-gray-200 outline-none focus:border-indigo-500 placeholder:text-gray-600"
       />
     </div>
   );
@@ -53,12 +53,12 @@ export function Tabs({
   onChange: (tab: string) => void;
 }) {
   return (
-    <div className="flex gap-0.5 bg-[#111118] border border-[#242433] rounded-lg p-0.5 w-fit mb-5">
+    <div className="flex gap-0.5 bg-[#111118] border border-[#242433] rounded-lg p-0.5 w-fit mb-5 overflow-x-auto max-w-full">
       {tabs.map((tab) => (
         <button
           key={tab}
           onClick={() => onChange(tab)}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all ${
+          className={`px-3.5 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-all whitespace-nowrap ${
             active === tab
               ? "bg-indigo-500 text-white font-semibold"
               : "text-gray-500 hover:text-gray-200"

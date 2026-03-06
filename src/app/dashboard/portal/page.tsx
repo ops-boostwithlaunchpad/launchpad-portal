@@ -125,7 +125,7 @@ export default function CustomerPortalPage() {
           <Select
             value={selectedClientId}
             onChange={(e) => setSelectedClientId(Number(e.target.value))}
-            className="!w-[200px]"
+            className="!w-full sm:!w-[200px]"
           >
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
@@ -139,7 +139,7 @@ export default function CustomerPortalPage() {
 
       <div className="p-4 md:p-6 flex-1">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-indigo-500/10 to-violet-500/5 border border-[#242433] rounded-2xl p-6 md:p-8 mb-5 text-center">
+        <div className="bg-gradient-to-br from-indigo-500/10 to-violet-500/5 border border-[#242433] rounded-2xl p-4 sm:p-6 md:p-8 mb-5 text-center">
           <div className="text-[9px] text-indigo-400 uppercase tracking-[2px] mb-2">
             Boost with Launchpad
           </div>
@@ -148,7 +148,7 @@ export default function CustomerPortalPage() {
             {client.industry} &middot; Client since {client.start}
           </p>
 
-          <div className="flex gap-6 md:gap-10 justify-center mt-6 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex gap-4 sm:gap-6 md:gap-10 justify-center mt-6">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
                 <TrendingUp size={16} className="text-emerald-400" />
@@ -267,8 +267,8 @@ export default function CustomerPortalPage() {
 
         {/* Tasks Table */}
         <Card title="All Tasks & Deliverables">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[12.5px]">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <table className="w-full border-collapse text-[12.5px] min-w-[500px]">
               <thead>
                 <tr>
                   {["Task", "Service", "Team", "Status", "Due Date"].map((h) => (
