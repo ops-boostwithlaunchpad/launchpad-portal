@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/apiAuth";
 
 // GET all employees (admin only)
 export async function GET() {
-  const { error } = await requireRole("admin");
+  const { error } = await requireRole("admin", "subadmin");
   if (error) return error;
 
   try {
@@ -20,7 +20,7 @@ export async function GET() {
 
 // POST create employee (admin only)
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin");
+  const { error } = await requireRole("admin", "subadmin");
   if (error) return error;
 
   const body = await request.json();
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
 // PUT update employee (admin only)
 export async function PUT(request: NextRequest) {
-  const { error } = await requireRole("admin");
+  const { error } = await requireRole("admin", "subadmin");
   if (error) return error;
 
   const body = await request.json();
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE employee (admin only)
 export async function DELETE(request: NextRequest) {
-  const { error } = await requireRole("admin");
+  const { error } = await requireRole("admin", "subadmin");
   if (error) return error;
 
   const { searchParams } = new URL(request.url);

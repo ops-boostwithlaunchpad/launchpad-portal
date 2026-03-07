@@ -8,6 +8,7 @@ const COOKIE_NAME = "lp_token";
 
 const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/dashboard"],
+  subadmin: ["/dashboard"],
   sales: ["/dashboard/sales", "/dashboard/clients"],
   backend: ["/dashboard/backend", "/dashboard/clients"],
   employee: ["/dashboard/backend", "/dashboard/clients", "/dashboard/my-tasks"],
@@ -18,6 +19,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
 
 const ROLE_DEFAULT: Record<string, string> = {
   admin: "/dashboard/sales/master",
+  subadmin: "/dashboard/sales/master",
   sales: "/dashboard/sales/master",
   backend: "/dashboard/backend",
   employee: "/dashboard/backend",

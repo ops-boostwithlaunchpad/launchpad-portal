@@ -23,7 +23,7 @@ export function StatCard({ value, label, sub, trend, valueColor = "default" }: S
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div>
-        <div className={`text-2xl font-bold leading-none font-serif ${valueColorMap[valueColor] || valueColorMap.default}`}>
+        <div className={`text-1xl font-bold leading-none font-serif ${valueColorMap[valueColor] || valueColorMap.default}`}>
           {value}
         </div>
         <div className="text-[11px] text-gray-500 mt-1.5">{label}</div>

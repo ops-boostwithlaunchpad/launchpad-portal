@@ -57,27 +57,48 @@ export function CancellationForm({ email }: CancellationFormProps) {
   const [supabaseClientId, setSupabaseClientId] = useState<number | null>(null);
   const [clientIdError, setClientIdError] = useState(false);
 
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
   const noticeEndDate = getNoticeEndDate();
   const canSubmit = reason && confirmed;
 
-  // Resolve client_id from Supabase clients table on mount
+  // Resolve client_id and check existing cancellation from Supabase
   useEffect(() => {
     const supabase = getClientSupabase();
     if (!supabase) {
       setClientIdError(true);
+      setLoadingStatus(false);
       return;
     }
+
+    // First get client_id
     supabase
       .from("clients")
       .select("id")
       .eq("client_email", email)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data) {
           setClientIdError(true);
-        } else {
-          setSupabaseClientId(data.id);
+          setLoadingStatus(false);
+          return;
         }
+        setSupabaseClientId(data.id);
+
+        // Check cancellation_requests table for an active request
+        const { data: cancellation } = await supabase
+          .from("cancellation_requests")
+          .select("id, notice_end_date")
+          .or(`client_id.eq.${data.id},requested_by.eq.${email}`)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (cancellation) {
+          const endDate = cancellation.notice_end_date || noticeEndDate;
+          setStatus({ type: "success", noticeEndDate: endDate });
+        }
+        setLoadingStatus(false);
       });
   }, [email]);
 
@@ -179,6 +200,14 @@ export function CancellationForm({ email }: CancellationFormProps) {
     }
     setWithdrawing(false);
     setShowCancelCancellationModal(false);
+  }
+
+  if (loadingStatus) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (status.type === "cancelled") {

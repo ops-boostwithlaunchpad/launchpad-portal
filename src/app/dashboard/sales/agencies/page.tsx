@@ -167,7 +167,7 @@ export default function AgenciesPage() {
 
   function toggleSvc(s: string) { setAssignServices((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]); }
 
-  const [desktopView, setDesktopView] = useState<"table" | "cards">("table");
+  const [desktopView, setDesktopView] = useState<"table" | "cards">("cards");
 
   const headers = ["", "Agency", "Owner", "Agents", "Clients", "Total MRR", "Commission %", "Status", "Actions"];
 

@@ -7,6 +7,7 @@ import {
 
 export enum UserRole {
   ADMIN = "admin",
+  SUBADMIN = "subadmin",
   SALES = "sales",
   BACKEND = "backend",
   CLIENT = "client",

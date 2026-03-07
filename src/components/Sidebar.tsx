@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   XCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
@@ -38,29 +39,30 @@ const navSections: NavSection[] = [
   {
     label: "Sales",
     items: [
-      { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "sales", "agent", "agency"] },
-      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "sales", "agency"] },
-      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "sales", "agent", "agency"] },
+      { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
+      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "subadmin", "sales", "agency"] },
+      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
     ],
   },
   {
     label: "Operations",
     items: [
-      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "sales", "backend", "employee", "agent", "agency"] },
-      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "backend", "employee"] },
+      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend", "employee", "agent", "agency"] },
+      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend", "employee"] },
       { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
   },
   {
     label: "Management",
     items: [
-      { name: "Employees", href: "/dashboard/employees", icon: Users, roles: ["admin"] },
+      { name: "Employees", href: "/dashboard/employees", icon: Users, roles: ["admin", "subadmin"] },
+      { name: "Sub Admins", href: "/dashboard/sub-admins", icon: ShieldCheck, roles: ["admin"] },
     ],
   },
   {
     label: "Client Portal",
     items: [
-      { name: "Customer View", href: "/dashboard/portal", icon: LineChart, roles: ["admin", "client"] },
+      { name: "Customer View", href: "/dashboard/portal", icon: LineChart, roles: ["admin", "subadmin", "client"] },
       { name: "Cancel Services", href: "/dashboard/cancel", icon: XCircle, roles: ["client"] },
     ],
   },
@@ -68,6 +70,7 @@ const navSections: NavSection[] = [
 
 const roleBadgeColors: Record<Role, string> = {
   admin: "bg-indigo-50 text-indigo-600 border-indigo-200",
+  subadmin: "bg-sky-50 text-sky-600 border-sky-200",
   sales: "bg-emerald-50 text-emerald-600 border-emerald-200",
   backend: "bg-amber-50 text-amber-600 border-amber-200",
   client: "bg-cyan-50 text-cyan-600 border-cyan-200",

@@ -35,6 +35,9 @@ const statusBadge: Record<string, string> = {
   "In Progress": "yellow",
   Review: "blue",
   Done: "green",
+  "Cancellation Requested": "red",
+  "Cancellation Pending": "red",
+  Cancelled: "red",
 };
 
 const svcBadge: Record<string, string> = {

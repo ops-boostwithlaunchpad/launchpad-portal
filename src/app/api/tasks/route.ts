@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 
 export async function GET(request: NextRequest) {
-  const { error } = await requireRole("admin", "sales", "backend", "employee", "client");
+  const { error } = await requireRole("admin", "subadmin", "sales", "backend", "employee", "client");
   if (error) return error;
   try {
     const db = await getDB();
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin", "sales", "backend", "employee");
+  const { error } = await requireRole("admin", "subadmin", "sales", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { error } = await requireRole("admin", "backend", "employee");
+  const { error } = await requireRole("admin", "subadmin", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
@@ -165,7 +165,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { error } = await requireRole("admin", "backend", "employee");
+  const { error } = await requireRole("admin", "subadmin", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();

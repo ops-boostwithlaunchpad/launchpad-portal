@@ -65,6 +65,8 @@ export function getDefaultRoute(role: Role): string {
   switch (role) {
     case "admin":
       return "/dashboard/sales/master";
+    case "subadmin":
+      return "/dashboard/sales/master";
     case "sales":
       return "/dashboard/sales/master";
     case "backend":
@@ -86,6 +88,8 @@ export function getDefaultRoute(role: Role): string {
 export function getAllowedRoutes(role: Role): string[] {
   switch (role) {
     case "admin":
+      return ["/dashboard"];
+    case "subadmin":
       return ["/dashboard"];
     case "sales":
       return ["/dashboard/sales", "/dashboard/clients"];

@@ -1,4 +1,4 @@
-export type Role = "admin" | "sales" | "backend" | "client" | "employee" | "agent" | "agency";
+export type Role = "admin" | "subadmin" | "sales" | "backend" | "client" | "employee" | "agent" | "agency";
 
 export type Department =
   | "Local SEO"

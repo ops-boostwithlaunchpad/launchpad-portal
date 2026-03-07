@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findAdmin, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
 import { Employee } from "@/entity/Employee";
+import { SubAdmin } from "@/entity/SubAdmin";
 import { ClientAccount } from "@/entity/ClientAccount";
 import { AgentEntity } from "@/entity/AgentEntity";
 import { Agency } from "@/entity/Agency";
@@ -18,7 +19,25 @@ export async function POST(request: NextRequest) {
   // Check hardcoded admin first
   user = findAdmin(email, password);
 
-  // If not admin, check employees table
+  // If not admin, check sub-admins table
+  if (!user) {
+    try {
+      const db = await getDB();
+      const subAdmin = await db.getRepository(SubAdmin).findOneBy({ email });
+      if (subAdmin && subAdmin.password === password) {
+        user = {
+          id: subAdmin.id,
+          name: subAdmin.name,
+          email: subAdmin.email,
+          role: "subadmin",
+        };
+      }
+    } catch {
+      // DB not available
+    }
+  }
+
+  // If not sub-admin, check employees table
   if (!user) {
     try {
       const db = await getDB();

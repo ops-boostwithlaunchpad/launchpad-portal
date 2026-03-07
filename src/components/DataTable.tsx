@@ -39,7 +39,7 @@ export function ViewToggle({ view, onToggle }: { view: "table" | "cards"; onTogg
 }
 
 export function DataTable<T>({ columns, data, onRowClick, mobileCard }: DataTableProps<T>) {
-  const [desktopView, setDesktopView] = useState<"table" | "cards">("table");
+  const [desktopView, setDesktopView] = useState<"table" | "cards">("cards");
 
   return (
     <>
