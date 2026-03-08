@@ -21,20 +21,20 @@ export function FormRow({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{children}</div>;
 }
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
   return (
     <input
       {...props}
-      className={`w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors focus:border-indigo-500 placeholder:text-gray-400 ${props.className || ""}`}
+      className={`w-full bg-gray-50 border rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors placeholder:text-gray-400 ${error ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-indigo-500"} ${props.className || ""}`}
     />
   );
 }
 
-export function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ children, error, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: boolean }) {
   return (
     <select
       {...props}
-      className={`w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors focus:border-indigo-500 ${props.className || ""}`}
+      className={`w-full bg-gray-50 border rounded-lg px-3 py-2 text-gray-800 text-[12.5px] outline-none transition-colors ${error ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-indigo-500"} ${props.className || ""}`}
     >
       {children}
     </select>

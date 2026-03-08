@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createToken, COOKIE_NAME, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
 import { Client } from "@/entity/Client";
-import { ClientAccount } from "@/entity/ClientAccount";
+import { User } from "@/entity/User";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const db = await getDB();
-    const accountRepo = db.getRepository(ClientAccount);
+    const userRepo = db.getRepository(User);
 
     // Check if already registered
-    const existingAccount = await accountRepo.findOneBy({ email });
-    if (existingAccount) {
+    const existingUser = await userRepo.findOneBy({ email });
+    if (existingUser) {
       return NextResponse.json(
         { error: "This email is already registered. Please sign in instead." },
         { status: 409 }
@@ -33,21 +33,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the client account using name from lp_clients
-    const account = accountRepo.create({ name: clientRecord.name, email, password });
-    const saved = await accountRepo.save(account);
+    // Create user with client role
+    const newUser = userRepo.create({ name: clientRecord.name, email, password, role: "client" });
+    const saved = await userRepo.save(newUser);
 
     // Create auth token
-    const user: AuthUser = {
+    const authUser: AuthUser = {
       id: saved.id,
       name: saved.name,
       email: saved.email,
       role: "client",
     };
 
-    const token = await createToken(user);
+    const token = await createToken(authUser);
 
-    const response = NextResponse.json({ user, redirectTo: "/dashboard/portal" });
+    const response = NextResponse.json({ user: authUser, redirectTo: "/dashboard/portal" });
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

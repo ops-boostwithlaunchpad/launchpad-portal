@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
-import { SubAdmin } from "@/entity/SubAdmin";
+import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 
 // GET all sub-admins (admin only)
@@ -10,7 +10,11 @@ export async function GET() {
 
   try {
     const db = await getDB();
-    const subAdmins = await db.getRepository(SubAdmin).find({ order: { createdAt: "DESC" } });
+    const subAdmins = await db.getRepository(User).find({
+      where: { role: "subadmin" },
+      order: { createdAt: "DESC" },
+      select: ["id", "name", "email", "phone", "createdAt"],
+    });
     return NextResponse.json(subAdmins);
   } catch (err) {
     console.error("Failed to fetch sub-admins:", err);
@@ -32,16 +36,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const db = await getDB();
-    const repo = db.getRepository(SubAdmin);
+    const repo = db.getRepository(User);
 
     const existing = await repo.findOneBy({ email });
     if (existing) {
-      return NextResponse.json({ error: "A sub-admin with this email already exists" }, { status: 409 });
+      return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
     }
 
-    const subAdmin = repo.create({ name, email, password, phone: phone || null });
-    const saved = await repo.save(subAdmin);
-    return NextResponse.json(saved, { status: 201 });
+    const user = repo.create({ name, email, password, role: "subadmin", phone: phone || null });
+    const saved = await repo.save(user);
+    const { password: _, ...result } = saved;
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     console.error("Failed to create sub-admin:", err);
     return NextResponse.json({ error: "Failed to create sub-admin" }, { status: 500 });
@@ -62,20 +67,21 @@ export async function PUT(request: NextRequest) {
 
   try {
     const db = await getDB();
-    const repo = db.getRepository(SubAdmin);
-    const subAdmin = await repo.findOneBy({ id });
+    const repo = db.getRepository(User);
+    const user = await repo.findOneBy({ id, role: "subadmin" });
 
-    if (!subAdmin) {
+    if (!user) {
       return NextResponse.json({ error: "Sub-admin not found" }, { status: 404 });
     }
 
-    if (name) subAdmin.name = name;
-    if (email) subAdmin.email = email;
-    if (password) subAdmin.password = password;
-    if (phone !== undefined) subAdmin.phone = phone || null;
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) user.password = password;
+    if (phone !== undefined) user.phone = phone || null;
 
-    const updated = await repo.save(subAdmin);
-    return NextResponse.json(updated);
+    const updated = await repo.save(user);
+    const { password: _, ...result } = updated;
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Failed to update sub-admin:", err);
     return NextResponse.json({ error: "Failed to update sub-admin" }, { status: 500 });
@@ -96,7 +102,7 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const db = await getDB();
-    await db.getRepository(SubAdmin).delete(Number(id));
+    await db.getRepository(User).delete({ id: Number(id), role: "subadmin" });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Failed to delete sub-admin:", err);

@@ -40,15 +40,15 @@ const navSections: NavSection[] = [
     label: "Sales",
     items: [
       { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
-      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "subadmin", "sales", "agency"] },
+      { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "subadmin", "sales"] },
       { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
     ],
   },
   {
     label: "Operations",
     items: [
-      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend", "employee", "agent", "agency"] },
-      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend", "employee"] },
+      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend", "agent"] },
+      { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend"] },
       { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
   },
@@ -95,7 +95,14 @@ export function Sidebar() {
   const visibleSections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => item.roles.includes(role)),
+      items: section.items
+        .filter((item) => item.roles.includes(role))
+        .map((item) => {
+          if (role === "agency" && item.name === "Master List") {
+            return { ...item, name: "Sales" };
+          }
+          return item;
+        }),
     }))
     .filter((section) => section.items.length > 0);
 

@@ -9,8 +9,8 @@ export class Agency {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column()
-  name!: string;
+  @Column({ type: "int", nullable: true })
+  userId!: number | null;
 
   @Column()
   agency!: string;
@@ -26,12 +26,6 @@ export class Agency {
 
   @Column({ type: "int" })
   commission!: number;
-
-  @Column({ default: "" })
-  email!: string;
-
-  @Column({ default: "" })
-  password!: string;
 
   @Column()
   status!: string;

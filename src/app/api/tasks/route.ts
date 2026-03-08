@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
 import { Task } from "@/entity/Task";
-import { ClientAccount } from "@/entity/ClientAccount";
+import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { getCurrentUser } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
@@ -85,9 +85,9 @@ export async function PATCH(request: NextRequest) {
     // Create notifications via Supabase (triggers Realtime) — skip if Supabase not configured
     const sb = getSupabase();
     if (sb) {
-      // Look up client account for client notifications
-      const clientAccount = await db.getRepository(ClientAccount).findOneBy({ name: task.client });
-      const clientUserId = clientAccount?.id;
+      // Look up client user for notifications
+      const clientUser = await db.getRepository(User).findOneBy({ name: task.client, role: "client" });
+      const clientUserId = clientUser?.id;
 
       if (wasAssigned && assignedTo) {
         // Notify the assigned employee

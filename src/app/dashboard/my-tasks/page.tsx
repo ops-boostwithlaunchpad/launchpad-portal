@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { ServiceBadge, PrioBadge, StatusBadge } from "@/components/Badge";
 import { useAuth } from "@/lib/AuthContext";
 import type { Task } from "@/lib/types";
+import { RefreshCcw } from "lucide-react";
 
 export default function MyTasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -57,12 +58,13 @@ export default function MyTasksPage() {
     );
   }
 
-  const queueCount = tasks.filter((t) => t.status === "Queued").length;
+  const isQueued = (s: string) => s === "queued" || s === "assigned";
+  const queueCount = tasks.filter((t) => isQueued(t.status)).length;
   const progressCount = tasks.filter((t) => t.status === "In Progress").length;
   const doneCount = tasks.filter((t) => t.status === "Done").length;
 
   const filteredTasks = tasks.filter((t) => {
-    if (activeTab === "In Queue") return t.status === "Queued";
+    if (activeTab === "In Queue") return isQueued(t.status);
     if (activeTab === "In Progress") return t.status === "In Progress";
     if (activeTab === "Completed") return t.status === "Done";
     return false;
@@ -83,7 +85,7 @@ export default function MyTasksPage() {
           className="text-gray-500 hover:text-gray-700 transition-colors p-1.5 cursor-pointer"
           title="Refresh tasks"
         >
-          Refresh
+          <RefreshCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
         </button>
       </Topbar>
 
@@ -101,7 +103,7 @@ export default function MyTasksPage() {
             >
               {tab.label}
               <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold ${
-                activeTab === tab.key ? "bg-white/80 text-white" : "bg-gray-200 text-gray-500"
+                activeTab === tab.key ? "bg-white/80 text-black" : "bg-gray-200 text-gray-500"
               }`}>
                 {tab.count}
               </span>

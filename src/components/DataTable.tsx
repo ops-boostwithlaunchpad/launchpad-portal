@@ -45,7 +45,7 @@ export function DataTable<T>({ columns, data, onRowClick, mobileCard }: DataTabl
     <>
       {/* View toggle — desktop only, only when mobileCard is provided */}
       {mobileCard && (
-        <div className="hidden md:flex justify-end mb-2.5">
+        <div className="hidden md:flex justify-end mb-0 -mt-8">
           <ViewToggle view={desktopView} onToggle={setDesktopView} />
         </div>
       )}

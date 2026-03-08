@@ -12,11 +12,14 @@ import { FormGroup, FormRow, Input, Select, Checkbox } from "@/components/FormGr
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Agent, Agency, Deal, Client } from "@/lib/types";
-import { Pencil, Trash2, UserPlus } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { Pencil, Trash2, UserPlus, Eye, EyeOff } from "lucide-react";
 
 const PER_PAGE = 10;
 
 export default function AgentsPage() {
+  const { user } = useAuth();
+  const canEdit = user ? ["admin", "subadmin", "sales"].includes(user.role) : false;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agencyList, setAgencyList] = useState<Agency[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -40,6 +43,8 @@ export default function AgentsPage() {
   const [email, setEmail] = useState("");
   const [passwordVal, setPasswordVal] = useState("");
   const [commission, setCommission] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   // Assign client modal
   const [assignModal, setAssignModal] = useState(false);
@@ -48,6 +53,8 @@ export default function AgentsPage() {
   const [assignServices, setAssignServices] = useState<string[]>([]);
   const [assignMRR, setAssignMRR] = useState("");
   const [assignStage, setAssignStage] = useState("Won");
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignAttempted, setAssignAttempted] = useState(false);
 
   function refreshData() {
     return Promise.all([
@@ -119,28 +126,36 @@ export default function AgentsPage() {
   }
 
   // Agent form handlers
-  function resetForm() { setName(""); setAgencyVal(""); setEmail(""); setPasswordVal(""); setCommission(""); setEditTarget(null); }
+  const [showPassword, setShowPassword] = useState(false);
+
+  function resetForm() { setName(""); setAgencyVal(""); setEmail(""); setPasswordVal(""); setCommission(""); setEditTarget(null); setAttempted(false); setShowPassword(false); }
 
   function openEdit(a: Agent) { setEditTarget(a); setName(a.name); setAgencyVal(a.agency); setEmail(a.email || ""); setPasswordVal(""); setCommission(String(a.commission)); setModalOpen(true); }
 
   async function handleSubmit() {
-    if (!name.trim() || !agencyVal) return;
-    if (editTarget) {
-      const body: Record<string, unknown> = {
-        id: editTarget.id, name: name.trim(), agency: agencyVal, email: email.trim(), closed: editTarget.closed, mrr: editTarget.mrr, commission: Number(commission) || 0, month: editTarget.month, status: editTarget.status,
-      };
-      if (passwordVal) body.password = passwordVal;
-      const res = await fetch("/api/agents", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const updated = await res.json();
-      setAgents(agents.map((a) => (a.id === editTarget.id ? updated : a)));
-    } else {
-      const res = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        name: name.trim(), agency: agencyVal, email: email.trim(), password: passwordVal, closed: 0, mrr: 0, commission: Number(commission) || 0, month: 0, status: "Active",
-      }) });
-      const created = await res.json();
-      setAgents([...agents, created]);
+    setAttempted(true);
+    if (!name.trim() || !agencyVal || !email.trim()) return;
+    setSaving(true);
+    try {
+      if (editTarget) {
+        const body: Record<string, unknown> = {
+          id: editTarget.id, name: name.trim(), agency: agencyVal, email: email.trim(), closed: editTarget.closed, mrr: editTarget.mrr, commission: Number(commission) || 0, month: editTarget.month, status: editTarget.status,
+        };
+        if (passwordVal) body.password = passwordVal;
+        const res = await fetch("/api/agents", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const updated = await res.json();
+        setAgents(agents.map((a) => (a.id === editTarget.id ? updated : a)));
+      } else {
+        const res = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+          name: name.trim(), agency: agencyVal, email: email.trim(), password: passwordVal, closed: 0, mrr: 0, commission: Number(commission) || 0, month: 0, status: "Active",
+        }) });
+        const created = await res.json();
+        setAgents([...agents, created]);
+      }
+      resetForm(); setModalOpen(false);
+    } finally {
+      setSaving(false);
     }
-    resetForm(); setModalOpen(false);
   }
 
   async function handleConfirmDelete() {
@@ -157,14 +172,20 @@ export default function AgentsPage() {
   }
 
   async function handleAssignClient() {
+    setAssignAttempted(true);
     if (!assignAgentId || !assignClientName || assignServices.length === 0) return;
     const agent = agents.find((a) => a.id === assignAgentId);
     if (!agent) return;
-    await fetch("/api/deals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      client: assignClientName, industry: clients.find((c) => c.name === assignClientName)?.industry || "Other",
-      agent: agent.name, services: assignServices, mrr: Number(assignMRR) || 0, stage: assignStage, close: new Date().toISOString().split("T")[0],
-    }) });
-    setAssignModal(false); refreshData();
+    setAssignSaving(true);
+    try {
+      await fetch("/api/deals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+        client: assignClientName, industry: clients.find((c) => c.name === assignClientName)?.industry || "Other",
+        agent: agent.name, services: assignServices, mrr: Number(assignMRR) || 0, stage: assignStage, close: new Date().toISOString().split("T")[0],
+      }) });
+      setAssignModal(false); setAssignAttempted(false); refreshData();
+    } finally {
+      setAssignSaving(false);
+    }
   }
 
   function toggleSvc(s: string) { setAssignServices((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]); }
@@ -189,7 +210,7 @@ export default function AgentsPage() {
           <option value="Onboarding">Onboarding</option>
           <option value="Inactive">Inactive</option>
         </Select>
-        <Button onClick={() => setModalOpen(true)}>+ Add Agent</Button>
+        {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Agent</Button>}
       </Topbar>
 
       <div className="p-4 md:p-6">
@@ -224,9 +245,9 @@ export default function AgentsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-emerald-600 font-mono text-[12px] font-medium">${ag.computedMRR.toLocaleString()}/mo</span>
                   <div className="flex items-center gap-0.5">
-                    <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
+                    {canEdit && <><button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
                     <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
-                    <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                    <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button></>}
                   </div>
                 </div>
               </div>
@@ -286,11 +307,11 @@ export default function AgentsPage() {
                         <td className="px-3 py-2.5 text-amber-600 font-mono font-semibold">${ag.commissionAmt.toLocaleString()}</td>
                         <td className="px-3 py-2.5"><StatusBadge status={ag.status} /></td>
                         <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                          {canEdit && <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
                             <button onClick={() => openEdit(ag)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
                             <button onClick={() => setDeleteTarget(ag)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
-                          </div>
+                          </div>}
                         </td>
                       </tr>
                       {isExp && (
@@ -343,11 +364,11 @@ export default function AgentsPage() {
 
       {/* Add/Edit Agent */}
       <Modal open={modalOpen} onClose={() => { resetForm(); setModalOpen(false); }} title={editTarget ? "Edit Agent" : "Add Agent"}
-        actions={<><Button variant="ghost" onClick={() => { resetForm(); setModalOpen(false); }}>Cancel</Button><Button onClick={handleSubmit}>{editTarget ? "Save Changes" : "Add Agent"}</Button></>}>
+        actions={<><Button variant="ghost" onClick={() => { resetForm(); setModalOpen(false); }}>Cancel</Button><Button loading={saving} onClick={handleSubmit}>{editTarget ? "Save Changes" : "Add Agent"}</Button></>}>
         <FormRow>
-          <FormGroup label="Agent Name"><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} /></FormGroup>
+          <FormGroup label="Agent Name"><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
           <FormGroup label="Agency">
-            <Select value={agencyVal} onChange={(e) => setAgencyVal(e.target.value)}>
+            <Select value={agencyVal} onChange={(e) => setAgencyVal(e.target.value)} error={attempted && !agencyVal}>
               <option value="">Select agency...</option>
               <option value="Solo">Solo (No Agency)</option>
               {agencyList.map((ag) => <option key={ag.id} value={ag.agency}>{ag.agency}</option>)}
@@ -355,8 +376,15 @@ export default function AgentsPage() {
           </FormGroup>
         </FormRow>
         <FormRow>
-          <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></FormGroup>
-          <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}><Input type="password" placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} /></FormGroup>
+          <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
+          <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}>
+            <div className="relative">
+              <Input type={showPassword ? "text" : "password"} placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </FormGroup>
         </FormRow>
         <FormRow>
           <FormGroup label="Commission %"><Input type="number" placeholder="e.g. 10" value={commission} onChange={(e) => setCommission(e.target.value)} /></FormGroup>
@@ -364,10 +392,10 @@ export default function AgentsPage() {
       </Modal>
 
       {/* Assign Client */}
-      <Modal open={assignModal} onClose={() => setAssignModal(false)} title="Assign Client"
-        actions={<><Button variant="ghost" onClick={() => setAssignModal(false)}>Cancel</Button><Button onClick={handleAssignClient}>Assign Client</Button></>}>
+      <Modal open={assignModal} onClose={() => { setAssignModal(false); setAssignAttempted(false); }} title="Assign Client"
+        actions={<><Button variant="ghost" onClick={() => { setAssignModal(false); setAssignAttempted(false); }}>Cancel</Button><Button loading={assignSaving} onClick={handleAssignClient}>Assign Client</Button></>}>
         <FormGroup label="Client">
-          <Select value={assignClientName} onChange={(e) => { setAssignClientName(e.target.value); setAssignServices([]); }}>
+          <Select value={assignClientName} onChange={(e) => { setAssignClientName(e.target.value); setAssignServices([]); }} error={assignAttempted && !assignClientName}>
             <option value="">Select client...</option>
             {clients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
           </Select>

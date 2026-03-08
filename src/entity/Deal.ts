@@ -29,4 +29,16 @@ export class Deal {
 
   @Column()
   close!: string;
+
+  @Column({ default: "Approved" })
+  approval!: string;
+
+  @Column({ type: "text", nullable: true })
+  rejectionReason!: string | null;
+
+  @Column({ type: "varchar", nullable: true })
+  submittedBy!: string | null;
+
+  @Column({ type: "int", nullable: true })
+  agencyId!: number | null;
 }

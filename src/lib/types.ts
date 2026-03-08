@@ -36,6 +36,10 @@ export interface Deal {
   mrr: number;
   stage: "Prospect" | "Proposal" | "Negotiation" | "Won" | "Lost";
   close: string;
+  approval: "Pending" | "Approved" | "Rejected";
+  rejectionReason: string | null;
+  submittedBy: string | null;
+  agencyId: number | null;
 }
 
 export interface Agency {

@@ -19,7 +19,6 @@ interface EmployeeRow {
   id: number;
   name: string;
   email: string;
-  password: string;
   department: string;
   createdAt: string;
 }
@@ -43,6 +42,7 @@ export default function EmployeesPage() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -107,6 +107,7 @@ export default function EmployeesPage() {
     setEditTarget(null);
     setFormError("");
     setShowPassword(false);
+    setAttempted(false);
   }
 
   function openEdit(emp: EmployeeRow) {
@@ -120,6 +121,7 @@ export default function EmployeesPage() {
   }
 
   async function handleSubmit() {
+    setAttempted(true);
     if (!name.trim() || !email.trim() || !department) {
       setFormError("Please fill in all required fields.");
       return;
@@ -438,8 +440,8 @@ export default function EmployeesPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={saving}>
-              {saving ? "Saving..." : editTarget ? "Save Changes" : "Add Employee"}
+            <Button onClick={handleSubmit} loading={saving}>
+              {editTarget ? "Save Changes" : "Add Employee"}
             </Button>
           </>
         }
@@ -455,6 +457,7 @@ export default function EmployeesPage() {
               placeholder="e.g. John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              error={attempted && !name.trim()}
             />
           </FormGroup>
           <FormGroup label="Email">
@@ -463,6 +466,7 @@ export default function EmployeesPage() {
               placeholder="john@launchpadboost.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              error={attempted && !email.trim()}
             />
           </FormGroup>
         </FormRow>
@@ -474,6 +478,7 @@ export default function EmployeesPage() {
                 placeholder={editTarget ? "Leave blank to keep current" : "Enter password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                error={attempted && !editTarget && !password.trim()}
               />
               <button
                 type="button"
@@ -485,7 +490,7 @@ export default function EmployeesPage() {
             </div>
           </FormGroup>
           <FormGroup label="Department">
-            <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <Select value={department} onChange={(e) => setDepartment(e.target.value)} error={attempted && !department}>
               <option value="">Select department...</option>
               {DEPARTMENTS.map((d) => (
                 <option key={d} value={d}>
@@ -507,8 +512,8 @@ export default function EmployeesPage() {
             <Button variant="ghost" onClick={() => { setAssignModalOpen(false); setAssignEmployee(null); }}>
               Cancel
             </Button>
-            <Button onClick={handleAssignTask} disabled={!selectedTaskId || assigning}>
-              {assigning ? "Assigning..." : "Assign Task"}
+            <Button onClick={handleAssignTask} disabled={!selectedTaskId} loading={assigning}>
+              Assign Task
             </Button>
           </>
         }

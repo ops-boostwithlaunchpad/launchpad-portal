@@ -32,8 +32,8 @@ export function ConfirmModal({
           <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={loading}>
-            {loading ? "Deleting..." : confirmLabel}
+          <Button variant="danger" onClick={onConfirm} loading={loading}>
+            {confirmLabel}
           </Button>
         </>
       }

@@ -16,7 +16,6 @@ interface SubAdminRow {
   id: number;
   name: string;
   email: string;
-  password: string;
   phone: string | null;
   createdAt: string;
 }
@@ -30,6 +29,7 @@ export default function SubAdminsPage() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [attempted, setAttempted] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -73,6 +73,7 @@ export default function SubAdminsPage() {
     setEditTarget(null);
     setFormError("");
     setShowPassword(false);
+    setAttempted(false);
   }
 
   function openEdit(sa: SubAdminRow) {
@@ -86,6 +87,7 @@ export default function SubAdminsPage() {
   }
 
   async function handleSubmit() {
+    setAttempted(true);
     if (!name.trim() || !email.trim()) {
       setFormError("Name and email are required.");
       return;
@@ -332,8 +334,8 @@ export default function SubAdminsPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={saving}>
-              {saving ? "Saving..." : editTarget ? "Save Changes" : "Add Sub Admin"}
+            <Button onClick={handleSubmit} loading={saving}>
+              {editTarget ? "Save Changes" : "Add Sub Admin"}
             </Button>
           </>
         }
@@ -349,6 +351,7 @@ export default function SubAdminsPage() {
               placeholder="e.g. John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              error={attempted && !name.trim()}
             />
           </FormGroup>
           <FormGroup label="Email">
@@ -357,6 +360,7 @@ export default function SubAdminsPage() {
               placeholder="john@boostwithlaunchpad.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              error={attempted && !email.trim()}
             />
           </FormGroup>
         </FormRow>
@@ -368,6 +372,7 @@ export default function SubAdminsPage() {
                 placeholder={editTarget ? "Leave blank to keep current" : "Enter password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                error={attempted && !editTarget && !password.trim()}
               />
               <button
                 type="button"

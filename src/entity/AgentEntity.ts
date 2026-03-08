@@ -9,8 +9,8 @@ export class AgentEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column()
-  name!: string;
+  @Column({ type: "int", nullable: true })
+  userId!: number | null;
 
   @Column()
   agency!: string;
@@ -26,12 +26,6 @@ export class AgentEntity {
 
   @Column({ type: "int" })
   month!: number;
-
-  @Column({ default: "" })
-  email!: string;
-
-  @Column({ default: "" })
-  password!: string;
 
   @Column()
   status!: string;

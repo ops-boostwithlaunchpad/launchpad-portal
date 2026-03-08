@@ -6,9 +6,6 @@ import { Agency } from "../entity/Agency";
 import { AgentEntity } from "../entity/AgentEntity";
 import { Client } from "../entity/Client";
 import { Task } from "../entity/Task";
-import { Employee } from "../entity/Employee";
-import { ClientAccount } from "../entity/ClientAccount";
-import { SubAdmin } from "../entity/SubAdmin";
 
 const AppDataSource = new DataSource({
   type: "postgres",
@@ -16,7 +13,7 @@ const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
   ssl: { rejectUnauthorized: false },
-  entities: [User, Deal, Agency, AgentEntity, Client, Task, Employee, ClientAccount, SubAdmin],
+  entities: [User, Deal, Agency, AgentEntity, Client, Task],
 });
 
 export async function getDB(): Promise<DataSource> {

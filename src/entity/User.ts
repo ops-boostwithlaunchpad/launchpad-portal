@@ -5,15 +5,6 @@ import {
   CreateDateColumn,
 } from "typeorm";
 
-export enum UserRole {
-  ADMIN = "admin",
-  SUBADMIN = "subadmin",
-  SALES = "sales",
-  BACKEND = "backend",
-  CLIENT = "client",
-  EMPLOYEE = "employee",
-}
-
 @Entity("lp_users")
 export class User {
   @PrimaryGeneratedColumn()
@@ -25,17 +16,17 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
+  @Column()
+  password!: string;
+
   @Column({ type: "varchar", default: "admin" })
   role!: string;
 
   @Column({ type: "varchar", nullable: true })
-  avatar!: string | null;
+  phone!: string | null;
 
   @Column({ type: "varchar", nullable: true })
-  password!: string | null;
-
-  @Column({ type: "varchar", nullable: true, unique: true })
-  googleId!: string | null;
+  department!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

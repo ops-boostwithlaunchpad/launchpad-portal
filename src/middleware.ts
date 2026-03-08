@@ -11,10 +11,10 @@ const ROLE_ROUTES: Record<string, string[]> = {
   subadmin: ["/dashboard"],
   sales: ["/dashboard/sales", "/dashboard/clients"],
   backend: ["/dashboard/backend", "/dashboard/clients"],
-  employee: ["/dashboard/backend", "/dashboard/clients", "/dashboard/my-tasks"],
+  employee: ["/dashboard/my-tasks"],
   client: ["/dashboard/portal", "/dashboard/cancel"],
   agent: ["/dashboard/sales", "/dashboard/clients"],
-  agency: ["/dashboard/sales", "/dashboard/clients"],
+  agency: ["/dashboard/sales"],
 };
 
 const ROLE_DEFAULT: Record<string, string> = {
@@ -22,7 +22,7 @@ const ROLE_DEFAULT: Record<string, string> = {
   subadmin: "/dashboard/sales/master",
   sales: "/dashboard/sales/master",
   backend: "/dashboard/backend",
-  employee: "/dashboard/backend",
+  employee: "/dashboard/my-tasks",
   client: "/dashboard/portal",
   agent: "/dashboard/sales/master",
   agency: "/dashboard/sales/master",

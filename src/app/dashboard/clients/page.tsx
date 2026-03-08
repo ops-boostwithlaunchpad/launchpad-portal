@@ -31,6 +31,7 @@ import {
   SVC_BADGE,
   TEAMS,
 } from "@/lib/types";
+import { useAuth } from "@/lib/AuthContext";
 import { Pencil, Trash2 } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
@@ -46,6 +47,8 @@ const INDUSTRIES = [
 ];
 
 export default function ClientsPage() {
+  const { user } = useAuth();
+  const canEdit = user ? ["admin", "subadmin", "sales"].includes(user.role) : false;
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [clientsList, setClientsList] = useState<Client[]>([]);
   const [tasksList, setTasksList] = useState<Task[]>([]);
@@ -69,6 +72,8 @@ export default function ClientsPage() {
   const [formMrr, setFormMrr] = useState("");
   const [formRep, setFormRep] = useState("");
   const [formWebsite, setFormWebsite] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   // Search, filter & pagination
   const [search, setSearch] = useState("");
@@ -84,6 +89,8 @@ export default function ClientsPage() {
   const [sendPriority, setSendPriority] = useState("Normal");
   const [sendDue, setSendDue] = useState("");
   const [sendNotes, setSendNotes] = useState("");
+  const [sendSaving, setSendSaving] = useState(false);
+  const [sendAttempted, setSendAttempted] = useState(false);
 
   /* ---------- fetch data ---------- */
 
@@ -144,6 +151,7 @@ export default function ClientsPage() {
     setFormRep("");
     setFormWebsite("");
     setEditTarget(null);
+    setAttempted(false);
   }
 
   function openEdit(c: Client) {
@@ -159,9 +167,11 @@ export default function ClientsPage() {
     setModalOpen(true);
   }
 
-  function handleSubmitClient() {
+  async function handleSubmitClient() {
+    setAttempted(true);
     if (!formName) return;
-
+    setSaving(true);
+    try {
     if (editTarget) {
       const updated: Client = {
         id: editTarget.id,
@@ -222,6 +232,9 @@ export default function ClientsPage() {
 
     setModalOpen(false);
     resetAddForm();
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleDeleteClient() {
@@ -239,10 +252,12 @@ export default function ClientsPage() {
       });
   }
 
-  function handleSendToBackend() {
+  async function handleSendToBackend() {
+    setSendAttempted(true);
     if (!sendClientId || !sendService || !sendTeam) return;
     const client = clientsList.find((c) => c.id === Number(sendClientId));
     if (!client) return;
+    setSendSaving(true);
     const newTask: Task = {
       id: Math.max(0, ...tasksList.map((t) => t.id)) + 1,
       client: client.name,
@@ -254,26 +269,27 @@ export default function ClientsPage() {
       status: "Queued",
       logs: [],
     };
-    fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTask),
-    })
-      .then((r) => r.json())
-      .then((saved) => {
-        setTasksList((prev) => [...prev, saved]);
-        setSentTasks((prev) => [saved, ...prev]);
-      })
-      .catch(() => {
-        setTasksList((prev) => [...prev, newTask]);
-        setSentTasks((prev) => [newTask, ...prev]);
+    try {
+      const r = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTask),
       });
+      const saved = await r.json();
+      setTasksList((prev) => [...prev, saved]);
+      setSentTasks((prev) => [saved, ...prev]);
+    } catch {
+      setTasksList((prev) => [...prev, newTask]);
+      setSentTasks((prev) => [newTask, ...prev]);
+    }
     setSendClientId("");
     setSendService("");
     setSendTeam("");
     setSendPriority("Normal");
     setSendDue("");
     setSendNotes("");
+    setSendAttempted(false);
+    setSendSaving(false);
   }
 
   /* ---------- columns for Client Roster table ---------- */
@@ -335,7 +351,7 @@ export default function ClientsPage() {
     {
       key: "actions",
       header: "",
-      render: (c: Client) => (
+      render: (c: Client) => canEdit ? (
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => openEdit(c)}
@@ -352,7 +368,7 @@ export default function ClientsPage() {
             <Trash2 size={13} />
           </button>
         </div>
-      ),
+      ) : null,
     },
   ];
 
@@ -362,7 +378,7 @@ export default function ClientsPage() {
     return (
       <>
         <Topbar title="Clients & Services">
-          <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>
+          {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>}
         </Topbar>
         <PageLoader />
       </>
@@ -372,7 +388,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen">
       <Topbar title="Clients & Services">
-        <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>
+        {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>}
       </Topbar>
 
       <div className="p-4 md:p-6">
@@ -444,10 +460,10 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <ServiceBadges services={c.services} />
-                      <div className="flex items-center gap-0.5 shrink-0 ml-2">
+                      {canEdit && <div className="flex items-center gap-0.5 shrink-0 ml-2">
                         <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
                         <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
-                      </div>
+                      </div>}
                     </div>
                   </div>
                 )}
@@ -525,6 +541,7 @@ export default function ClientsPage() {
                 <Select
                   value={sendClientId}
                   onChange={(e) => setSendClientId(e.target.value)}
+                  error={sendAttempted && !sendClientId}
                 >
                   <option value="">Select client...</option>
                   {clientsList.map((c) => (
@@ -539,6 +556,7 @@ export default function ClientsPage() {
                 <Select
                   value={sendService}
                   onChange={(e) => setSendService(e.target.value)}
+                  error={sendAttempted && !sendService}
                 >
                   <option value="">Select service...</option>
                   {SERVICE_OPTIONS.map((svc) => (
@@ -553,6 +571,7 @@ export default function ClientsPage() {
                 <Select
                   value={sendTeam}
                   onChange={(e) => setSendTeam(e.target.value)}
+                  error={sendAttempted && !sendTeam}
                 >
                   <option value="">Select team...</option>
                   {TEAMS.map((t) => (
@@ -594,6 +613,7 @@ export default function ClientsPage() {
               <Button
                 className="w-full"
                 onClick={handleSendToBackend}
+                loading={sendSaving}
               >
                 Send to Backend
               </Button>
@@ -654,7 +674,7 @@ export default function ClientsPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmitClient}>{editTarget ? "Save Changes" : "Add Client"}</Button>
+            <Button loading={saving} onClick={handleSubmitClient}>{editTarget ? "Save Changes" : "Add Client"}</Button>
           </>
         }
       >
@@ -664,6 +684,7 @@ export default function ClientsPage() {
               placeholder="Business name"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
+              error={attempted && !formName}
             />
           </FormGroup>
           <FormGroup label="Industry">
