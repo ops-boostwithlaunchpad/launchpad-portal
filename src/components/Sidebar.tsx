@@ -41,13 +41,13 @@ const navSections: NavSection[] = [
     items: [
       { name: "Master List", href: "/dashboard/sales/master", icon: LayoutGrid, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
       { name: "Agency Owners", href: "/dashboard/sales/agencies", icon: Users, roles: ["admin", "subadmin", "sales"] },
-      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "subadmin", "sales", "agent", "agency"] },
+      { name: "Agents", href: "/dashboard/sales/agents", icon: UserCheck, roles: ["admin", "subadmin", "sales", "agency"] },
     ],
   },
   {
     label: "Operations",
     items: [
-      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend", "agent"] },
+      { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend"] },
       { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend"] },
       { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
@@ -98,7 +98,7 @@ export function Sidebar() {
       items: section.items
         .filter((item) => item.roles.includes(role))
         .map((item) => {
-          if (role === "agency" && item.name === "Master List") {
+          if ((role === "agency" || role === "agent") && item.name === "Master List") {
             return { ...item, name: "Sales" };
           }
           return item;

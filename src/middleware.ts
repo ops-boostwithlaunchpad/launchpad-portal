@@ -13,7 +13,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   backend: ["/dashboard/backend", "/dashboard/clients"],
   employee: ["/dashboard/my-tasks"],
   client: ["/dashboard/portal", "/dashboard/cancel"],
-  agent: ["/dashboard/sales", "/dashboard/clients"],
+  agent: ["/dashboard/sales/master"],
   agency: ["/dashboard/sales"],
 };
 

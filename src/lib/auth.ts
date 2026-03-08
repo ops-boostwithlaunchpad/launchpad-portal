@@ -100,7 +100,7 @@ export function getAllowedRoutes(role: Role): string[] {
     case "client":
       return ["/dashboard/portal"];
     case "agent":
-      return ["/dashboard/sales", "/dashboard/clients"];
+      return ["/dashboard/sales/master"];
     case "agency":
       return ["/dashboard/sales"];
     default:
