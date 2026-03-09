@@ -7,6 +7,9 @@ const typeColors: Record<string, string> = {
   task_assigned: "border-purple-200 bg-purple-50",
   task_started: "border-amber-200 bg-amber-50",
   task_completed: "border-emerald-200 bg-emerald-50",
+  error: "border-red-200 bg-red-50",
+  success: "border-emerald-200 bg-emerald-50",
+  info: "border-indigo-200 bg-indigo-50",
 };
 
 export function ToastContainer() {

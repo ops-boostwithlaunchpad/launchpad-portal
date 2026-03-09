@@ -3,6 +3,7 @@ import { createToken, COOKIE_NAME, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
 import { Client } from "@/entity/Client";
 import { User } from "@/entity/User";
+import { hashPassword } from "@/lib/password";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -34,7 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user with client role
-    const newUser = userRepo.create({ name: clientRecord.name, email, password, role: "client" });
+    const hashed = await hashPassword(password);
+    const newUser = userRepo.create({ name: clientRecord.name, email, password: hashed, role: "client" });
     const saved = await userRepo.save(newUser);
 
     // Create auth token

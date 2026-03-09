@@ -6,16 +6,18 @@ import { PageLoader } from "@/components/Loader";
 import { Button } from "@/components/Button";
 import { ServiceBadge, PrioBadge, StatusBadge } from "@/components/Badge";
 import { useAuth } from "@/lib/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import type { Task } from "@/lib/types";
-import { RefreshCcw, Paperclip } from "lucide-react";
+import { Paperclip } from "lucide-react";
 
 export default function MyTasksPage() {
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useNotifications();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("In Queue");
   const [updating, setUpdating] = useState<number | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [savingProgress, setSavingProgress] = useState<number | null>(null);
 
   const fetchTasks = useCallback(async () => {
     if (!user) return;
@@ -29,24 +31,51 @@ export default function MyTasksPage() {
     if (!authLoading && user) fetchTasks();
   }, [authLoading, user, fetchTasks]);
 
-  async function handleRefresh() {
-    setRefreshing(true);
-    await fetchTasks();
-    setRefreshing(false);
-  }
-
   async function updateStatus(taskId: number, newStatus: string) {
     setUpdating(taskId);
-    await fetch("/api/tasks", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: taskId, status: newStatus }),
-    });
-
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus as Task["status"] } : t))
-    );
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: taskId, status: newStatus }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showToast("Update Failed", data.error || "Failed to update task status", "error");
+        setUpdating(null);
+        return;
+      }
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, status: newStatus as Task["status"], progress: newStatus === "Review" ? 100 : t.progress }
+            : t
+        )
+      );
+    } catch {
+      showToast("Error", "Something went wrong while updating the task", "error");
+    }
     setUpdating(null);
+  }
+
+  async function updateProgress(taskId: number, value: number) {
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, progress: value } : t)));
+    setSavingProgress(taskId);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: taskId, progress: value }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showToast("Save Failed", data.error || "Failed to update progress", "error");
+      }
+    } catch {
+      showToast("Error", "Something went wrong while saving progress", "error");
+    }
+    setSavingProgress(null);
   }
 
   if (authLoading || loading) {
@@ -61,11 +90,13 @@ export default function MyTasksPage() {
   const isQueued = (s: string) => s.toLowerCase() === "queued" || s.toLowerCase() === "assigned";
   const queueCount = tasks.filter((t) => isQueued(t.status)).length;
   const progressCount = tasks.filter((t) => t.status === "In Progress").length;
+  const reviewCount = tasks.filter((t) => t.status === "Review").length;
   const doneCount = tasks.filter((t) => t.status === "Done").length;
 
   const filteredTasks = tasks.filter((t) => {
     if (activeTab === "In Queue") return isQueued(t.status);
     if (activeTab === "In Progress") return t.status === "In Progress";
+    if (activeTab === "In Review") return t.status === "Review";
     if (activeTab === "Completed") return t.status === "Done";
     return false;
   });
@@ -73,21 +104,13 @@ export default function MyTasksPage() {
   const tabsWithCounts = [
     { key: "In Queue", label: "Queue", count: queueCount },
     { key: "In Progress", label: "Progress", count: progressCount },
+    { key: "In Review", label: "Review", count: reviewCount },
     { key: "Completed", label: "Completed", count: doneCount },
   ];
 
   return (
     <>
-      <Topbar title="My Tasks">
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="text-gray-500 hover:text-gray-700 transition-colors p-1.5 cursor-pointer"
-          title="Refresh tasks"
-        >
-          <RefreshCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
-      </Topbar>
+      <Topbar title="My Tasks" />
 
       <div className="p-4 md:p-6">
         <div className="flex gap-0.5 bg-white border border-gray-200 rounded-lg p-0.5 w-fit mb-5 overflow-x-auto max-w-full">
@@ -113,7 +136,7 @@ export default function MyTasksPage() {
 
         {filteredTasks.length === 0 ? (
           <div className="text-center text-gray-500 text-sm py-16">
-            No tasks {activeTab === "In Queue" ? "in queue" : activeTab === "In Progress" ? "in progress" : "completed"}.
+            No tasks {activeTab === "In Queue" ? "in queue" : activeTab === "In Progress" ? "in progress" : activeTab === "In Review" ? "in review" : "completed"}.
           </div>
         ) : (
           <div className="grid gap-3">
@@ -155,6 +178,53 @@ export default function MyTasksPage() {
                   </a>
                 )}
 
+                {/* Progress slider for In Progress tasks */}
+                {activeTab === "In Progress" && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-medium text-gray-600">Progress</span>
+                      <span className="text-[11px] font-bold text-indigo-600">{task.progress ?? 0}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={task.progress ?? 0}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, progress: val } : t)));
+                      }}
+                      disabled={savingProgress === task.id}
+                      className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
+                      style={{ background: `linear-gradient(to right, #f59e0b, #6366f1, #10b981 ${Math.max(task.progress ?? 0, 5)}%, #e5e7eb ${Math.max(task.progress ?? 0, 5)}%)` }}
+                    />
+                    <div className="flex justify-between text-[9px] text-gray-400 mt-0.5">
+                      <span>0%</span>
+                      <span>25%</span>
+                      <span>50%</span>
+                      <span>75%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress bar for Review/Completed tabs */}
+                {(activeTab === "In Review" || activeTab === "Completed") && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-medium text-gray-600">Progress</span>
+                      <span className="text-[11px] font-bold text-emerald-600">{task.progress ?? 0}%</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${task.progress ?? 0}%`, background: "linear-gradient(to right, #f59e0b, #6366f1, #10b981)" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Status transition buttons */}
                 {activeTab === "In Queue" && (
                   <Button
@@ -167,14 +237,26 @@ export default function MyTasksPage() {
                   </Button>
                 )}
 
-                {activeTab === "In Progress" && (
+                {activeTab === "In Progress" && (task.progress ?? 0) < 100 && (
                   <Button
                     size="sm"
-                    onClick={() => updateStatus(task.id, "Done")}
-                    disabled={updating === task.id}
-                     className="flex gap-1 items-center"
+                    variant="ghost"
+                    onClick={() => updateProgress(task.id, task.progress ?? 0)}
+                    disabled={savingProgress === task.id}
+                    className="flex gap-1 items-center"
                   >
-                    {updating === task.id ? "Completing..." : "Mark Complete"}
+                    {savingProgress === task.id ? "Updating..." : "Update Progress"}
+                  </Button>
+                )}
+
+                {activeTab === "In Progress" && (task.progress ?? 0) >= 100 && (
+                  <Button
+                    size="sm"
+                    onClick={() => updateStatus(task.id, "Review")}
+                    disabled={updating === task.id}
+                    className="flex gap-1 items-center"
+                  >
+                    {updating === task.id ? "Submitting..." : "Submit for Review"}
                   </Button>
                 )}
               </div>

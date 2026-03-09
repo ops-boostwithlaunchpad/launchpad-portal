@@ -180,7 +180,7 @@ export default function SalesMasterPage() {
 
   async function handleSubmit() {
     setAttempted(true);
-    if (!form.client || !form.industry || !form.mrr) return;
+    if (!form.client || !form.industry || !form.mrr || !form.email) return;
     if (isAgency && !form.agent) return;
     setSaving(true);
     try {
@@ -314,21 +314,22 @@ export default function SalesMasterPage() {
     {
       key: "approval",
       header: "Approval",
-      render: (d: Deal) => (
-        <div className="flex flex-col gap-1">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border w-fit ${APPROVAL_COLORS[d.approval] || APPROVAL_COLORS.Approved}`}>
-            {d.approval || "Approved"}
-          </span>
-          {d.approval === "Rejected" && d.rejectionReason && (
-            <span className="text-[10px] text-red-500 leading-tight max-w-[140px] truncate" title={d.rejectionReason}>
-              {d.rejectionReason}
+      render: (d: Deal) =>
+        d.approval === "Pending" || d.approval === "Rejected" ? (
+          <div className="flex flex-col gap-1">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border w-fit ${APPROVAL_COLORS[d.approval]}`}>
+              {d.approval}
             </span>
-          )}
-          {d.submittedBy && (
-            <span className="text-[9px] text-gray-400">by {d.submittedBy}</span>
-          )}
-        </div>
-      ),
+            {d.approval === "Rejected" && d.rejectionReason && (
+              <span className="text-[10px] text-red-500 leading-tight max-w-[140px] truncate" title={d.rejectionReason}>
+                {d.rejectionReason}
+              </span>
+            )}
+            {d.submittedBy && (
+              <span className="text-[9px] text-gray-400">by {d.submittedBy}</span>
+            )}
+          </div>
+        ) : null,
     },
     {
       key: "close",
@@ -476,9 +477,11 @@ export default function SalesMasterPage() {
                     <span className="font-medium text-[12.5px] text-gray-800">{d.client}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${APPROVAL_COLORS[d.approval] || APPROVAL_COLORS.Approved}`}>
-                      {d.approval || "Approved"}
-                    </span>
+                    {(d.approval === "Pending" || d.approval === "Rejected") && (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${APPROVAL_COLORS[d.approval]}`}>
+                        {d.approval}
+                      </span>
+                    )}
                     <StageBadge stage={d.stage} />
                   </div>
                 </div>
@@ -539,7 +542,7 @@ export default function SalesMasterPage() {
 
         {/* Client Info */}
         <FormRow>
-          <FormGroup label="Client / Business Name">
+          <FormGroup label="Client / Business Name" required>
             <Input
               placeholder="e.g. Acme Corp"
               value={form.client}
@@ -547,7 +550,7 @@ export default function SalesMasterPage() {
               error={attempted && !form.client}
             />
           </FormGroup>
-          <FormGroup label="Industry">
+          <FormGroup label="Industry" required>
             <Select
               value={form.industry}
               onChange={(e) => setForm({ ...form, industry: e.target.value })}
@@ -571,12 +574,13 @@ export default function SalesMasterPage() {
               onChange={(e) => setForm({ ...form, contact: e.target.value })}
             />
           </FormGroup>
-          <FormGroup label="Email">
+          <FormGroup label="Email" required>
             <Input
               type="email"
               placeholder="email@example.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+              error={attempted && !form.email}
             />
           </FormGroup>
         </FormRow>
@@ -600,7 +604,7 @@ export default function SalesMasterPage() {
 
         {/* Agency / Agent */}
         {isAgency ? (
-          <FormGroup label="Agent">
+          <FormGroup label="Agent" required>
             <Select
               value={form.agent}
               onChange={(e) => setForm({ ...form, agent: e.target.value })}
@@ -640,7 +644,7 @@ export default function SalesMasterPage() {
         )}
 
         {/* Services */}
-        <FormGroup label="Services">
+        <FormGroup label="Services" required>
           <div className="flex flex-wrap gap-3 mt-1">
             {SERVICE_OPTIONS.map((svc) => (
               <Checkbox
@@ -655,7 +659,7 @@ export default function SalesMasterPage() {
 
         {/* Deal Details */}
         <FormRow>
-          <FormGroup label="MRR ($)">
+          <FormGroup label="MRR ($)" required>
             <Input
               type="number"
               placeholder="e.g. 1200"

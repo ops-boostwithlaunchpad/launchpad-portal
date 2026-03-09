@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
 import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
+import { hashPassword } from "@/lib/password";
 
 // GET all employees (admin only)
 export async function GET() {
@@ -43,7 +44,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
     }
 
-    const user = repo.create({ name, email, password, role: "employee", department });
+    const hashed = await hashPassword(password);
+    const user = repo.create({ name, email, password: hashed, role: "employee", department });
     const saved = await repo.save(user);
     const { password: _, ...result } = saved;
     return NextResponse.json(result, { status: 201 });
@@ -76,7 +78,7 @@ export async function PUT(request: NextRequest) {
 
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password) user.password = password;
+    if (password) user.password = await hashPassword(password);
     if (department) user.department = department;
 
     const updated = await repo.save(user);

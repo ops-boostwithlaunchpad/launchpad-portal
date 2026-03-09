@@ -190,7 +190,7 @@ export default function AgenciesPage() {
 
   const [desktopView, setDesktopView] = useState<"table" | "cards">("cards");
 
-  const headers = ["", "Agency", "Owner", "Agents", "Clients", "Total MRR", "Commission %", "Status", "Actions"];
+  const headers = ["", "Agency", "Owner", "Agents", "Clients", "Total MRR", "Commission %", "Actions"];
 
   if (loading) return <><Topbar title="Sales — Agency Owners" /><PageLoader /></>;
 
@@ -223,7 +223,6 @@ export default function AgenciesPage() {
                       <div className="text-[10px] text-gray-500">{a.name}</div>
                     </div>
                   </div>
-                  <StatusBadge status={a.status} />
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
                   <div><span className="text-gray-400">Agents</span><div className="text-gray-700 font-medium">{a.agentCount}</div></div>
@@ -256,7 +255,6 @@ export default function AgenciesPage() {
                         <div className="text-[10px] text-gray-500">{a.name}</div>
                       </div>
                     </div>
-                    <StatusBadge status={a.status} />
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
                     <div><span className="text-gray-400">Agents</span><div className="text-gray-700 font-medium">{a.agentCount}</div></div>
@@ -293,7 +291,6 @@ export default function AgenciesPage() {
                         <td className="px-3 py-2.5 text-gray-700">{a.clientCount}</td>
                         <td className="px-3 py-2.5 text-emerald-600 font-mono font-semibold">${a.totalMRR.toLocaleString()}</td>
                         <td className="px-3 py-2.5 text-gray-700">{a.commission}%</td>
-                        <td className="px-3 py-2.5"><StatusBadge status={a.status} /></td>
                         <td className="px-3 py-2.5">
                           {canEdit && <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openAssignClient(a.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
@@ -303,7 +300,7 @@ export default function AgenciesPage() {
                         </td>
                       </tr>
                       {isExp && (
-                        <tr><td colSpan={9} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                        <tr><td colSpan={8} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                           {a.agentList.length === 0 ? <div className="text-gray-500 text-xs py-2">No agents under this agency yet.</div> : (
                             <div className="space-y-3">
                               <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Agents under {a.agency}</div>
@@ -342,7 +339,7 @@ export default function AgenciesPage() {
                     </Fragment>
                   );
                 })}
-                {paginated.length === 0 && <tr><td colSpan={9} className="text-center text-gray-500 py-8 text-xs">{search ? "No agencies match your search." : "No agencies yet."}</td></tr>}
+                {paginated.length === 0 && <tr><td colSpan={8} className="text-center text-gray-500 py-8 text-xs">{search ? "No agencies match your search." : "No agencies yet."}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -365,11 +362,11 @@ export default function AgenciesPage() {
       <Modal open={modalOpen} onClose={() => { resetForm(); setModalOpen(false); }} title={editTarget ? "Edit Agency" : "Add Agency"}
         actions={<><Button variant="ghost" onClick={() => { resetForm(); setModalOpen(false); }}>Cancel</Button><Button loading={saving} onClick={handleSubmit}>{editTarget ? "Save Changes" : "Add Agency"}</Button></>}>
         <FormRow>
-          <FormGroup label="Owner Name"><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
-          <FormGroup label="Agency Name"><Input placeholder="Agency name" value={agency} onChange={(e) => setAgency(e.target.value)} error={attempted && !agency.trim()} /></FormGroup>
+          <FormGroup label="Owner Name" required><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
+          <FormGroup label="Agency Name" required><Input placeholder="Agency name" value={agency} onChange={(e) => setAgency(e.target.value)} error={attempted && !agency.trim()} /></FormGroup>
         </FormRow>
         <FormRow>
-          <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
+          <FormGroup label="Email" required><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
           <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}>
             <div className="relative">
               <Input type={showPassword ? "text" : "password"} placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} />

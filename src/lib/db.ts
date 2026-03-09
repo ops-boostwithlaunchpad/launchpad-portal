@@ -10,7 +10,7 @@ import { Task } from "../entity/Task";
 const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL,
-  synchronize: true,
+  synchronize: process.env.NODE_ENV !== "production",
   logging: false,
   ssl: { rejectUnauthorized: false },
   entities: [User, Deal, Agency, AgentEntity, Client, Task],

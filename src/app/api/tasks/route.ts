@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const db = await getDB();
     const taskRepo = db.getRepository(Task);
     const body = await request.json();
-    const { id, ...data } = body;
+    const { id: _id, ...data } = body;
     const newTask = await taskRepo.save({ ...data, logs: [] });
 
     // Send notifications if task is assigned to an employee
@@ -54,7 +54,13 @@ export async function POST(request: NextRequest) {
       });
 
       // Notify the client
-      const clientUser = await db.getRepository(User).findOneBy({ name: newTask.client, role: "client" });
+      const { Client: ClientEntity } = await import("@/entity/Client");
+      const clientRecord = newTask.clientId
+        ? await db.getRepository(ClientEntity).findOneBy({ id: newTask.clientId })
+        : null;
+      const clientUser = clientRecord
+        ? await db.getRepository(User).findOneBy({ email: clientRecord.email, role: "client" })
+        : await db.getRepository(User).findOneBy({ name: newTask.client, role: "client" });
       if (clientUser) {
         await sb.from("lp_notifications").insert({
           user_id: clientUser.id,
@@ -80,7 +86,7 @@ export async function PATCH(request: NextRequest) {
     const db = await getDB();
     const taskRepo = db.getRepository(Task);
     const body = await request.json();
-    const { id, status, log, assignedTo, assignedToName } = body;
+    const { id, status, log, assignedTo, assignedToName, priority, due, fileUrl, fileName, progress } = body;
 
     const task = await taskRepo.findOneBy({ id });
     if (!task) {
@@ -90,9 +96,19 @@ export async function PATCH(request: NextRequest) {
     // Track what changed for notifications
     const wasAssigned = assignedTo !== undefined && task.assignedTo !== assignedTo;
     const statusChanged = status && task.status !== status;
+    const oldProgress = task.progress ?? 0;
+    const progressChanged = progress !== undefined && oldProgress !== progress;
 
     if (status) {
       task.status = status;
+      // Auto-set progress based on status transitions
+      if (status === "Done") task.progress = 100;
+      else if (status === "Review") task.progress = 100;
+      else if (status === "Queued") task.progress = 0;
+    }
+
+    if (progress !== undefined) {
+      task.progress = progress;
     }
 
     if (log) {
@@ -105,6 +121,18 @@ export async function PATCH(request: NextRequest) {
     if (assignedToName !== undefined) {
       task.assignedToName = assignedToName;
     }
+    if (priority) {
+      task.priority = priority;
+    }
+    if (due !== undefined) {
+      task.due = due;
+    }
+    if (fileUrl !== undefined) {
+      task.fileUrl = fileUrl;
+    }
+    if (fileName !== undefined) {
+      task.fileName = fileName;
+    }
 
     const updated = await taskRepo.save(task);
 
@@ -112,7 +140,13 @@ export async function PATCH(request: NextRequest) {
     const sb = getSupabase();
     if (sb) {
       // Look up client user for notifications
-      const clientUser = await db.getRepository(User).findOneBy({ name: task.client, role: "client" });
+      const { Client: ClientEntity } = await import("@/entity/Client");
+      const clientRecord = task.clientId
+        ? await db.getRepository(ClientEntity).findOneBy({ id: task.clientId })
+        : null;
+      const clientUser = clientRecord
+        ? await db.getRepository(User).findOneBy({ email: clientRecord.email, role: "client" })
+        : await db.getRepository(User).findOneBy({ name: task.client, role: "client" });
       const clientUserId = clientUser?.id;
 
       if (wasAssigned && assignedTo) {
@@ -137,17 +171,17 @@ export async function PATCH(request: NextRequest) {
         }
       }
 
-      if (statusChanged && (status === "In Progress" || status === "Done")) {
+      if (statusChanged && (status === "In Progress" || status === "Review" || status === "Done")) {
         const currentUser = await getCurrentUser();
         const userName = currentUser?.name || "An employee";
-        const action = status === "In Progress" ? "started" : "completed";
+        const action = status === "In Progress" ? "started" : status === "Review" ? "submitted for review" : "completed";
 
         // Notify admin
         await sb.from("lp_notifications").insert({
           user_id: 0,
           title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
           message: `${userName} ${action}: ${task.service} for ${task.client}`,
-          type: status === "In Progress" ? "task_started" : "task_completed",
+          type: status === "In Progress" ? "task_started" : status === "Review" ? "task_review" : "task_completed",
           task_id: task.id,
         });
 
@@ -157,7 +191,33 @@ export async function PATCH(request: NextRequest) {
             user_id: clientUserId,
             title: `Task ${action.charAt(0).toUpperCase() + action.slice(1)}`,
             message: `Your ${task.service} task has been ${action}`,
-            type: status === "In Progress" ? "task_started" : "task_completed",
+            type: status === "In Progress" ? "task_started" : status === "Review" ? "task_review" : "task_completed",
+            task_id: task.id,
+          });
+        }
+      }
+
+      // Notify admin and client when progress is updated (without a status change)
+      if (progressChanged && !statusChanged) {
+        const currentUser = await getCurrentUser();
+        const userName = currentUser?.name || "An employee";
+
+        // Notify admin
+        await sb.from("lp_notifications").insert({
+          user_id: 0,
+          title: "Progress Updated",
+          message: `${userName} updated ${task.service} for ${task.client} to ${task.progress}%`,
+          type: "task_progress",
+          task_id: task.id,
+        });
+
+        // Notify the client
+        if (clientUserId) {
+          await sb.from("lp_notifications").insert({
+            user_id: clientUserId,
+            title: "Progress Updated",
+            message: `Your ${task.service} task is now ${task.progress}% complete`,
+            type: "task_progress",
             task_id: task.id,
           });
         }
@@ -191,7 +251,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { error } = await requireRole("admin", "subadmin", "backend", "employee");
+  const { user, error } = await requireRole("admin", "subadmin", "backend", "employee");
   if (error) return error;
   try {
     const db = await getDB();
@@ -201,6 +261,15 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
     }
+
+    // Employees can only delete their own tasks
+    if (user!.role === "employee") {
+      const task = await taskRepo.findOneBy({ id: Number(id) });
+      if (!task || task.assignedTo !== user!.id) {
+        return NextResponse.json({ error: "You can only delete tasks assigned to you" }, { status: 403 });
+      }
+    }
+
     await taskRepo.delete(id);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

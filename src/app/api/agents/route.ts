@@ -4,6 +4,7 @@ import { AgentEntity } from "@/entity/AgentEntity";
 import { Agency } from "@/entity/Agency";
 import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
+import { hashPassword } from "@/lib/password";
 import { In } from "typeorm";
 
 // Helper: join agent records with user data and return combined shape
@@ -79,8 +80,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
     }
 
+    const hashed = await hashPassword(password || "");
     const newUser = await userRepo.save(
-      userRepo.create({ name, email, password: password || "", role: "agent" })
+      userRepo.create({ name, email, password: hashed, role: "agent" })
     );
 
     // Create agent record linked to user
@@ -149,7 +151,7 @@ export async function PUT(request: NextRequest) {
       if (user) {
         if (name) user.name = name;
         if (email) user.email = email;
-        if (password) user.password = password;
+        if (password) user.password = await hashPassword(password);
         await userRepo.save(user);
         userName = user.name;
         userEmail = user.email;

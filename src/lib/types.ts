@@ -95,12 +95,14 @@ export interface Client {
 export interface Task {
   id: number;
   client: string;
+  clientId?: number | null;
   service: string;
   team: string;
   priority: "Urgent" | "High" | "Normal";
   due: string;
   notes: string;
   status: "Queued" | "In Progress" | "Review" | "Done";
+  progress: number;
   logs: string[];
   assignedTo?: number | null;
   assignedToName?: string | null;

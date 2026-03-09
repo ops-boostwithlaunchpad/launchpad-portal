@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findAdmin, createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
+import { createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
 import { User } from "@/entity/User";
+import { verifyPassword } from "@/lib/password";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -12,25 +13,19 @@ export async function POST(request: NextRequest) {
 
   let authUser: AuthUser | null = null;
 
-  // Check hardcoded admin first (bootstrap)
-  authUser = findAdmin(email, password);
-
-  // Single query against unified users table
-  if (!authUser) {
-    try {
-      const db = await getDB();
-      const dbUser = await db.getRepository(User).findOneBy({ email });
-      if (dbUser && dbUser.password === password) {
-        authUser = {
-          id: dbUser.id,
-          name: dbUser.name,
-          email: dbUser.email,
-          role: dbUser.role as AuthUser["role"],
-        };
-      }
-    } catch (err) {
-      console.error("Login DB error:", err);
+  try {
+    const db = await getDB();
+    const dbUser = await db.getRepository(User).findOneBy({ email });
+    if (dbUser && (await verifyPassword(password, dbUser.password))) {
+      authUser = {
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role as AuthUser["role"],
+      };
     }
+  } catch (err) {
+    console.error("Login DB error:", err);
   }
 
   if (!authUser) {

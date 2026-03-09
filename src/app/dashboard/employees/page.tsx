@@ -23,6 +23,10 @@ interface EmployeeRow {
   createdAt: string;
 }
 
+const deptShortLabel: Record<string, string> = {
+  "Local Service Ads": "LSA",
+};
+
 const deptBadgeColors: Record<string, string> = {
   "Local SEO": "bg-green-50 text-green-600 border-green-200",
   "AI SEO": "bg-teal-50 text-teal-600 border-teal-200",
@@ -272,7 +276,7 @@ export default function EmployeesPage() {
             deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"
           }`}
         >
-          {emp.department}
+          {deptShortLabel[emp.department] || emp.department}
         </span>
       ),
     },
@@ -379,7 +383,7 @@ export default function EmployeesPage() {
                     </div>
                   </div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
-                    {emp.department}
+                    {deptShortLabel[emp.department] || emp.department}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -452,7 +456,7 @@ export default function EmployeesPage() {
           </div>
         )}
         <FormRow>
-          <FormGroup label="Full Name">
+          <FormGroup label="Full Name" required>
             <Input
               placeholder="e.g. John Doe"
               value={name}
@@ -460,7 +464,7 @@ export default function EmployeesPage() {
               error={attempted && !name.trim()}
             />
           </FormGroup>
-          <FormGroup label="Email">
+          <FormGroup label="Email" required>
             <Input
               type="email"
               placeholder="john@launchpadboost.com"
@@ -489,7 +493,7 @@ export default function EmployeesPage() {
               </button>
             </div>
           </FormGroup>
-          <FormGroup label="Department">
+          <FormGroup label="Department" required>
             <Select value={department} onChange={(e) => setDepartment(e.target.value)} error={attempted && !department}>
               <option value="">Select department...</option>
               {DEPARTMENTS.map((d) => (
@@ -609,7 +613,7 @@ export default function EmployeesPage() {
                   >
                     {tab.label}
                     <span className={`min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold ${
-                      empTaskTab === tab.key ? "bg-white/80 text-white" : "bg-gray-200 text-gray-500"
+                      empTaskTab === tab.key ? "bg-white/80 text-black" : "bg-gray-200 text-gray-500"
                     }`}>
                       {tab.count}
                     </span>

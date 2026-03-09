@@ -2,9 +2,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { Role } from "./types";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "launchpad-secret-key-change-in-prod"
-);
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET environment variable is required");
+}
+
+const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
 const COOKIE_NAME = "lp_token";
 
@@ -13,23 +15,6 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
-}
-
-// Only one hardcoded admin user
-const ADMIN_USER: AuthUser & { password: string } = {
-  id: 0,
-  name: "Admin",
-  email: "admin@boostwithlaunchpad.com",
-  role: "admin",
-  password: "123",
-};
-
-export function findAdmin(email: string, password: string): AuthUser | null {
-  if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
-    const { password: _, ...authUser } = ADMIN_USER;
-    return authUser;
-  }
-  return null;
 }
 
 export async function createToken(user: AuthUser): Promise<string> {
@@ -98,7 +83,7 @@ export function getAllowedRoutes(role: Role): string[] {
     case "employee":
       return ["/dashboard/my-tasks"];
     case "client":
-      return ["/dashboard/portal"];
+      return ["/dashboard/portal", "/dashboard/cancel"];
     case "agent":
       return ["/dashboard/sales/master"];
     case "agency":

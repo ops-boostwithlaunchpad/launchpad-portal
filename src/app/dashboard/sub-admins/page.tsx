@@ -346,7 +346,7 @@ export default function SubAdminsPage() {
           </div>
         )}
         <FormRow>
-          <FormGroup label="Full Name">
+          <FormGroup label="Full Name" required>
             <Input
               placeholder="e.g. John Doe"
               value={name}
@@ -354,7 +354,7 @@ export default function SubAdminsPage() {
               error={attempted && !name.trim()}
             />
           </FormGroup>
-          <FormGroup label="Email">
+          <FormGroup label="Email" required>
             <Input
               type="email"
               placeholder="john@boostwithlaunchpad.com"

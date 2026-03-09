@@ -39,6 +39,7 @@ interface NotificationContextType {
   markAsRead: (ids: number[]) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   dismissToast: (id: string) => void;
+  showToast: (title: string, message: string, type?: string) => void;
 }
 
 // --- Context ---
@@ -50,6 +51,7 @@ const NotificationContext = createContext<NotificationContextType>({
   markAsRead: async () => {},
   markAllAsRead: async () => {},
   dismissToast: () => {},
+  showToast: () => {},
 });
 
 // --- Provider ---
@@ -81,6 +83,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeout);
       toastTimeouts.current.delete(id);
     }
+  }, []);
+
+  // Manual toast for success/error feedback (no Supabase needed)
+  const showToast = useCallback((title: string, message: string, type = "info") => {
+    const toastId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev, { id: toastId, title, message, type }]);
+    const timeout = setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== toastId));
+      toastTimeouts.current.delete(toastId);
+    }, 4000);
+    toastTimeouts.current.set(toastId, timeout);
   }, []);
 
   // Fetch existing notifications on mount
@@ -160,7 +173,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, unreadCount, toasts, markAsRead, markAllAsRead, dismissToast }}
+      value={{ notifications, unreadCount, toasts, markAsRead, markAllAsRead, dismissToast, showToast }}
     >
       {children}
     </NotificationContext.Provider>

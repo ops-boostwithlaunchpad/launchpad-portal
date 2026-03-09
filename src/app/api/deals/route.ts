@@ -6,15 +6,7 @@ import { Task } from "@/entity/Task";
 import { Agency } from "@/entity/Agency";
 import { requireRole } from "@/lib/apiAuth";
 import { getSupabase } from "@/lib/supabase";
-
-const SERVICE_TEAM_MAP: Record<string, string> = {
-  "Local SEO": "SEO & GBP Team",
-  "AI SEO": "AI SEO Team",
-  LSA: "Paid Ads Team",
-  "Google Ads": "Paid Ads Team",
-  "Meta Ads": "Paid Ads Team",
-  Automation: "Automation Team (n8n)",
-};
+import { createTaskForService } from "@/lib/taskCreation";
 
 /**
  * When a deal is approved, create or update the corresponding client.
@@ -24,7 +16,7 @@ async function syncDealToClient(db: Awaited<ReturnType<typeof getDB>>, deal: Dea
   const clientRepo = db.getRepository(Client);
   const taskRepo = db.getRepository(Task);
 
-  let client = await clientRepo.findOneBy({ name: deal.client });
+  let client = await clientRepo.findOneBy({ email: deal.email });
 
   if (client) {
     // Append new services from this deal
@@ -33,6 +25,7 @@ async function syncDealToClient(db: Awaited<ReturnType<typeof getDB>>, deal: Dea
       client.services = [...client.services, ...newServices];
     }
     // Update fields from deal
+    client.name = deal.client || client.name;
     client.industry = deal.industry || client.industry;
     client.contact = deal.contact || client.contact;
     client.email = deal.email || client.email;
@@ -49,17 +42,7 @@ async function syncDealToClient(db: Awaited<ReturnType<typeof getDB>>, deal: Dea
     // Create tasks for newly added services if already sent to backend
     if (client.sentToBackend && newServices.length > 0) {
       for (const svc of newServices) {
-        const team = SERVICE_TEAM_MAP[svc] || "Technical Team";
-        await taskRepo.save({
-          client: client.name,
-          service: svc,
-          team,
-          priority: "Normal",
-          due: "",
-          notes: `Auto-created: ${client.name} — ${svc}`,
-          status: "Queued",
-          logs: [],
-        });
+        await createTaskForService(db, client, svc, "");
       }
     }
   } else {
@@ -90,19 +73,9 @@ async function syncDealToClient(db: Awaited<ReturnType<typeof getDB>>, deal: Dea
     !client.sentToBackend
   ) {
     for (const svc of client.services) {
-      const existing = await taskRepo.findOneBy({ client: client.name, service: svc });
+      const existing = await taskRepo.findOneBy({ clientId: client.id, service: svc });
       if (!existing) {
-        const team = SERVICE_TEAM_MAP[svc] || "Technical Team";
-        await taskRepo.save({
-          client: client.name,
-          service: svc,
-          team,
-          priority: "Normal",
-          due: "",
-          notes: `Auto-created: ${client.name} onboarding — ${svc}`,
-          status: "Queued",
-          logs: [],
-        });
+        await createTaskForService(db, client, svc, "onboarding");
       }
     }
     client.sentToBackend = true;
@@ -211,6 +184,25 @@ export async function PATCH(request: NextRequest) {
     // When approved, sync deal to client (create/update client + backend tasks)
     if (approval === "Approved") {
       await syncDealToClient(db, updated);
+    }
+
+    // Notify the agency that submitted the deal
+    if (deal.agencyId) {
+      const sb = getSupabase();
+      if (sb) {
+        const agency = await db.getRepository(Agency).findOneBy({ id: deal.agencyId });
+        if (agency?.userId) {
+          const isApproved = approval === "Approved";
+          await sb.from("lp_notifications").insert({
+            user_id: agency.userId,
+            title: isApproved ? "Deal Approved" : "Deal Rejected",
+            message: isApproved
+              ? `Your deal "${deal.client}" has been approved`
+              : `Your deal "${deal.client}" was rejected${rejectionReason ? `: ${rejectionReason}` : ""}`,
+            type: isApproved ? "deal_approved" : "deal_rejected",
+          });
+        }
+      }
     }
 
     return NextResponse.json(updated);

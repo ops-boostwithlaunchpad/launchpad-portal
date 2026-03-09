@@ -30,7 +30,6 @@ export default function AgentsPage() {
   // Search, filters, pagination
   const [search, setSearch] = useState("");
   const [filterAgency, setFilterAgency] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
 
   // Agent modal state
@@ -104,15 +103,12 @@ export default function AgentsPage() {
     if (filterAgency) {
       result = result.filter((a) => a.agency === filterAgency);
     }
-    if (filterStatus) {
-      result = result.filter((a) => a.status === filterStatus);
-    }
     return result;
-  }, [enriched, search, filterAgency, filterStatus]);
+  }, [enriched, search, filterAgency]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  useEffect(() => { setPage(1); }, [search, filterAgency, filterStatus]);
+  useEffect(() => { setPage(1); }, [search, filterAgency]);
 
   const totalMRR = enriched.reduce((s, a) => s + a.computedMRR, 0);
   const avgCommission = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.commission, 0) / agents.length) : 0;
@@ -192,7 +188,7 @@ export default function AgentsPage() {
 
   const [desktopView, setDesktopView] = useState<"table" | "cards">("cards");
 
-  const headers = ["", "Agent", "Agency", "Deals", "MRR", "Commission %", "Commission $", "Status", "Actions"];
+  const headers = ["", "Agent", "Agency", "Deals", "MRR", "Commission %", "Commission $", "Actions"];
 
   if (loading) return <><Topbar title="Sales — Agents" /><PageLoader /></>;
 
@@ -203,12 +199,6 @@ export default function AgentsPage() {
         <Select value={filterAgency} onChange={(e) => setFilterAgency(e.target.value)} className="!w-[140px]">
           <option value="">All Agencies</option>
           {agencyNames.map((a) => <option key={a} value={a}>{a}</option>)}
-        </Select>
-        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="!w-[120px]">
-          <option value="">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Onboarding">Onboarding</option>
-          <option value="Inactive">Inactive</option>
         </Select>
         {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Agent</Button>}
       </Topbar>
@@ -224,7 +214,7 @@ export default function AgentsPage() {
         <Card title="All Agents" actions={<ViewToggle view={desktopView} onToggle={setDesktopView} />}>
           {/* Mobile card view */}
           <div className="md:hidden space-y-2.5">
-            {paginated.length === 0 && <p className="text-center text-gray-400 py-8 text-xs">{search || filterAgency || filterStatus ? "No agents match your filters." : "No agents yet."}</p>}
+            {paginated.length === 0 && <p className="text-center text-gray-400 py-8 text-xs">{search || filterAgency ? "No agents match your filters." : "No agents yet."}</p>}
             {paginated.map((ag) => (
               <div key={ag.id} className="border border-gray-200 rounded-lg p-3 bg-white">
                 <div className="flex items-center justify-between mb-2">
@@ -235,7 +225,6 @@ export default function AgentsPage() {
                       <div className="text-[10px] text-gray-500">{ag.agency}</div>
                     </div>
                   </div>
-                  <StatusBadge status={ag.status} />
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
                   <div><span className="text-gray-400">Deals</span><div className="text-gray-700 font-medium">{ag.dealCount}</div></div>
@@ -257,7 +246,7 @@ export default function AgentsPage() {
           {/* Desktop card view */}
           {desktopView === "cards" && (
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {paginated.length === 0 && <p className="col-span-full text-center text-gray-400 py-8 text-xs">{search || filterAgency || filterStatus ? "No agents match your filters." : "No agents yet."}</p>}
+              {paginated.length === 0 && <p className="col-span-full text-center text-gray-400 py-8 text-xs">{search || filterAgency ? "No agents match your filters." : "No agents yet."}</p>}
               {paginated.map((ag) => (
                 <div key={ag.id} className="border border-gray-200 rounded-lg p-3 bg-white">
                   <div className="flex items-center justify-between mb-2">
@@ -268,7 +257,6 @@ export default function AgentsPage() {
                         <div className="text-[10px] text-gray-500">{ag.agency}</div>
                       </div>
                     </div>
-                    <StatusBadge status={ag.status} />
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-2 text-[11px]">
                     <div><span className="text-gray-400">Deals</span><div className="text-gray-700 font-medium">{ag.dealCount}</div></div>
@@ -305,7 +293,6 @@ export default function AgentsPage() {
                         <td className="px-3 py-2.5 text-emerald-600 font-mono font-semibold">${ag.computedMRR.toLocaleString()}</td>
                         <td className="px-3 py-2.5 text-gray-700">{ag.commission}%</td>
                         <td className="px-3 py-2.5 text-amber-600 font-mono font-semibold">${ag.commissionAmt.toLocaleString()}</td>
-                        <td className="px-3 py-2.5"><StatusBadge status={ag.status} /></td>
                         <td className="px-3 py-2.5">
                           {canEdit && <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                             <button onClick={() => openAssignClient(ag.id)} className="text-gray-400 hover:text-emerald-600 transition-colors p-1.5" title="Assign Client"><UserPlus size={13} /></button>
@@ -315,7 +302,7 @@ export default function AgentsPage() {
                         </td>
                       </tr>
                       {isExp && (
-                        <tr><td colSpan={9} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                        <tr><td colSpan={8} className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                           {ag.clients.length === 0 ? <div className="text-gray-500 text-xs py-2">No clients assigned to this agent.</div> : (
                             <div className="space-y-3">
                               <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Clients handled by {ag.name}</div>
@@ -343,7 +330,7 @@ export default function AgentsPage() {
                     </Fragment>
                   );
                 })}
-                {paginated.length === 0 && <tr><td colSpan={9} className="text-center text-gray-500 py-8 text-xs">{search || filterAgency || filterStatus ? "No agents match your filters." : "No agents yet."}</td></tr>}
+                {paginated.length === 0 && <tr><td colSpan={8} className="text-center text-gray-500 py-8 text-xs">{search || filterAgency ? "No agents match your filters." : "No agents yet."}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -366,8 +353,8 @@ export default function AgentsPage() {
       <Modal open={modalOpen} onClose={() => { resetForm(); setModalOpen(false); }} title={editTarget ? "Edit Agent" : "Add Agent"}
         actions={<><Button variant="ghost" onClick={() => { resetForm(); setModalOpen(false); }}>Cancel</Button><Button loading={saving} onClick={handleSubmit}>{editTarget ? "Save Changes" : "Add Agent"}</Button></>}>
         <FormRow>
-          <FormGroup label="Agent Name"><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
-          <FormGroup label="Agency">
+          <FormGroup label="Agent Name" required><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
+          <FormGroup label="Agency" required>
             <Select value={agencyVal} onChange={(e) => setAgencyVal(e.target.value)} error={attempted && !agencyVal}>
               <option value="">Select agency...</option>
               <option value="Solo">Solo (No Agency)</option>
@@ -376,7 +363,7 @@ export default function AgentsPage() {
           </FormGroup>
         </FormRow>
         <FormRow>
-          <FormGroup label="Email"><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
+          <FormGroup label="Email" required><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
           <FormGroup label={editTarget ? "Password (leave blank to keep)" : "Password"}>
             <div className="relative">
               <Input type={showPassword ? "text" : "password"} placeholder={editTarget ? "••••••" : "Login password"} value={passwordVal} onChange={(e) => setPasswordVal(e.target.value)} />

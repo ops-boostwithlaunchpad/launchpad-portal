@@ -4,13 +4,14 @@ interface FormGroupProps {
   label: string;
   children: React.ReactNode;
   className?: string;
+  required?: boolean;
 }
 
-export function FormGroup({ label, children, className = "" }: FormGroupProps) {
+export function FormGroup({ label, children, className = "", required }: FormGroupProps) {
   return (
     <div className={`mb-3 ${className}`}>
       <label className="block text-[10px] text-gray-500 mb-1.5 uppercase tracking-wider font-semibold">
-        {label}
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
     </div>

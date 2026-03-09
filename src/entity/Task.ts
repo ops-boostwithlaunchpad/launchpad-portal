@@ -2,6 +2,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 
 @Entity("lp_tasks")
@@ -11,6 +13,9 @@ export class Task {
 
   @Column()
   client!: string;
+
+  @Column({ type: "int", nullable: true })
+  clientId!: number | null;
 
   @Column()
   service!: string;
@@ -30,7 +35,10 @@ export class Task {
   @Column()
   status!: string;
 
-  @Column("simple-array")
+  @Column({ type: "int", default: 0 })
+  progress!: number;
+
+  @Column({ type: "jsonb", default: [] })
   logs!: string[];
 
   @Column({ type: "int", nullable: true })
@@ -44,4 +52,10 @@ export class Task {
 
   @Column({ type: "varchar", nullable: true })
   fileName!: string | null;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

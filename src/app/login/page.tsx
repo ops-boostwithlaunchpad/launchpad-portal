@@ -117,8 +117,16 @@ export default function LoginPage() {
           </form>
         </div>
 
+        {/* Sign Up Link */}
+        <p className="text-center text-sm text-gray-500 mt-5">
+          New client?{" "}
+          <a href="/signup" className="text-indigo-500 hover:text-indigo-600 font-medium transition-colors">
+            Sign up here
+          </a>
+        </p>
+
         {/* Footer */}
-        <div className="text-center mt-6">
+        <div className="text-center mt-4">
           <p className="text-[10px] text-gray-400">
             Boost with Launchpad &middot; Palm Beach Gardens, FL
           </p>

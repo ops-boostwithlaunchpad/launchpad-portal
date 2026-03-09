@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { Topbar, Tabs, SearchInput } from "@/components/Topbar";
 import { StatCard, StatsRow } from "@/components/StatCard";
-import { Card, DataTable } from "@/components/DataTable";
+import { Card, ViewToggle } from "@/components/DataTable";
 import {
   StatusBadge,
   ServiceBadge,
@@ -27,21 +27,13 @@ import {
   Task,
   SERVICE_OPTIONS,
   SVC_DESC,
+  INDUSTRIES,
 } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
-import { Pencil, Trash2, Check, Paperclip, X } from "lucide-react";
+import { Pencil, Trash2, Check, Paperclip, X, ChevronDown, ChevronRight } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
-const INDUSTRIES = [
-  "Personal Injury Law",
-  "Criminal Defense Law",
-  "Healthcare / Medical",
-  "Dental",
-  "Construction",
-  "Home Services",
-  "Other",
-];
 
 export default function ClientsPage() {
   const { user } = useAuth();
@@ -79,6 +71,18 @@ export default function ClientsPage() {
   const [filterService, setFilterService] = useState("");
   const [page, setPage] = useState(1);
   const PER_PAGE = 20;
+
+  // Expandable rows
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [desktopView, setDesktopView] = useState<"table" | "cards">("cards");
+
+  function toggleExpand(id: number) {
+    setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  function getClientTasks(clientName: string) {
+    return tasksList.filter((t) => t.client === clientName);
+  }
 
   // Employees list for team assignment
   const [employees, setEmployees] = useState<{ id: number; name: string; department: string | null }[]>([]);
@@ -144,20 +148,21 @@ export default function ClientsPage() {
   const selectedClient = clientsList.find((c) => c.id === Number(sendClientId));
   const selectedClientServices = selectedClient?.services || [];
 
-  // Services that already have tasks assigned for the selected client
+  // Services that already have tasks with an employee assigned for the selected client
   const assignedServicesForClient = useMemo(() => {
     if (!selectedClient) return new Set<string>();
     return new Set(
-      tasksList.filter((t) => t.client === selectedClient.name).map((t) => t.service)
+      tasksList.filter((t) => (t.clientId === selectedClient.id || t.client === selectedClient.name) && t.assignedTo).map((t) => t.service)
     );
   }, [selectedClient, tasksList]);
 
-  // Unassigned task counts per client (services without a backend task)
+  // Unassigned task counts per client (services without an employee-assigned task)
   const unassignedCountMap = useMemo(() => {
     const map: Record<number, number> = {};
     for (const c of clientsList) {
-      const clientTasks = tasksList.filter((t) => t.client === c.name);
-      const assignedSvcs = new Set(clientTasks.map((t) => t.service));
+      const assignedSvcs = new Set(
+        tasksList.filter((t) => t.client === c.name && t.assignedTo).map((t) => t.service)
+      );
       map[c.id] = c.services.filter((s) => !assignedSvcs.has(s)).length;
     }
     return map;
@@ -210,7 +215,7 @@ export default function ClientsPage() {
 
   async function handleSubmitClient() {
     setAttempted(true);
-    if (!formName) return;
+    if (!formName || !formEmail) return;
     setSaving(true);
     try {
       if (editTarget) {
@@ -323,33 +328,65 @@ export default function ClientsPage() {
     }
 
     const emp = employees.find((e) => e.name === sendTeam);
-    const newTask: Task = {
-      id: Math.max(0, ...tasksList.map((t) => t.id)) + 1,
-      client: client.name,
-      service: sendService,
-      team: emp?.department || sendTeam,
-      priority: sendPriority as Task["priority"],
-      due: sendDue,
-      notes: sendNotes,
-      status: "Queued",
-      logs: [],
-      assignedTo: emp?.id || null,
-      assignedToName: emp?.name || null,
-      fileUrl,
-      fileName,
-    };
-    try {
-      const r = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTask),
-      });
-      const saved = await r.json();
-      setTasksList((prev) => [...prev, saved]);
-      setSendSuccess(`${sendService} task for ${client.name} assigned to ${emp?.name || sendTeam}`);
-      setTimeout(() => setSendSuccess(null), 5000);
-    } catch {
-      setTasksList((prev) => [...prev, newTask]);
+
+    // Check if an unassigned task already exists for this client + service
+    const existingTask = tasksList.find(
+      (t) => (t.clientId === client.id || t.client === client.name) && t.service === sendService && !t.assignedTo
+    );
+
+    if (existingTask) {
+      // Update the existing unassigned task with employee assignment
+      try {
+        const r = await fetch("/api/tasks", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: existingTask.id,
+            assignedTo: emp?.id || null,
+            assignedToName: emp?.name || null,
+            priority: sendPriority,
+            ...(sendDue ? { due: sendDue } : {}),
+            ...(sendNotes ? { log: sendNotes } : {}),
+            ...(fileUrl ? { fileUrl, fileName } : {}),
+          }),
+        });
+        const saved = await r.json();
+        setTasksList((prev) => prev.map((t) => (t.id === existingTask.id ? saved : t)));
+        setSendSuccess(`${sendService} task for ${client.name} assigned to ${emp?.name || sendTeam}`);
+        setTimeout(() => setSendSuccess(null), 5000);
+      } catch { /* failed */ }
+    } else {
+      // Create a new task
+      const newTask: Task = {
+        id: Math.max(0, ...tasksList.map((t) => t.id)) + 1,
+        client: client.name,
+        clientId: client.id,
+        service: sendService,
+        team: emp?.department || sendTeam,
+        priority: sendPriority as Task["priority"],
+        due: sendDue,
+        notes: sendNotes,
+        status: "Queued",
+        progress: 0,
+        logs: [],
+        assignedTo: emp?.id || null,
+        assignedToName: emp?.name || null,
+        fileUrl,
+        fileName,
+      };
+      try {
+        const r = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newTask),
+        });
+        const saved = await r.json();
+        setTasksList((prev) => [...prev, saved]);
+        setSendSuccess(`${sendService} task for ${client.name} assigned to ${emp?.name || sendTeam}`);
+        setTimeout(() => setSendSuccess(null), 5000);
+      } catch {
+        setTasksList((prev) => [...prev, newTask]);
+      }
     }
     setSendClientId("");
     setSendService("");
@@ -362,113 +399,15 @@ export default function ClientsPage() {
     setSendSaving(false);
   }
 
-  /* ---------- columns for Client Roster table ---------- */
+  /* ---------- task status badge ---------- */
+  const TASK_STATUS_COLORS: Record<string, string> = {
+    Queued: "bg-gray-100 text-gray-600 border-gray-200",
+    "In Progress": "bg-blue-50 text-blue-600 border-blue-200",
+    Review: "bg-amber-50 text-amber-600 border-amber-200",
+    Done: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  };
 
-  const clientColumns = [
-    {
-      key: "client",
-      header: "Client",
-      render: (c: Client) => (
-        <div className="flex items-center gap-2.5">
-          <Avatar name={c.name} />
-          <div>
-            <div className="font-medium text-gray-900">{c.name}</div>
-            <div className="text-[10px] text-gray-500">{c.website}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "industry",
-      header: "Industry",
-      render: (c: Client) => (
-        <span className="text-gray-500">{c.industry}</span>
-      ),
-    },
-    {
-      key: "services",
-      header: "Services",
-      render: (c: Client) => <ServiceBadges services={c.services} />,
-    },
-    {
-      key: "mrr",
-      header: "MRR",
-      render: (c: Client) => (
-        <span className="text-emerald-600 font-mono">
-          ${c.mrr.toLocaleString()}
-        </span>
-      ),
-    },
-    {
-      key: "since",
-      header: "Since",
-      render: (c: Client) => (
-        <span className="font-mono text-gray-500">{c.start}</span>
-      ),
-    },
-    {
-      key: "rep",
-      header: "Rep",
-      render: (c: Client) => (
-        <span className="text-gray-500">{c.rep}</span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (c: Client) => <StatusBadge status={c.status} />,
-    },
-    {
-      key: "onboarding",
-      header: "Onboarding",
-      render: (c: Client) => {
-        const checks = [
-          { label: "Stripe", done: c.stripePaymentDone },
-          { label: "Onboarding", done: c.onboardingFormFilled },
-          { label: "Agreement", done: c.agreementSigned },
-        ];
-        return (
-          <div className="space-y-1">
-            {checks.map((ch) => (
-              <div
-                key={ch.label}
-                className={`flex items-center gap-1.5 text-[11px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}
-              >
-                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
-                  ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
-                }`}>
-                  {ch.done && <Check size={10} className="text-white" />}
-                </div>
-                {ch.label}
-              </div>
-            ))}
-          </div>
-        );
-      },
-    },
-    {
-      key: "actions",
-      header: "",
-      render: (c: Client) => canEdit ? (
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => openEdit(c)}
-            className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5 cursor-pointer"
-            title="Edit"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => setDeleteTarget(c)}
-            className="text-gray-400 hover:text-red-600 transition-colors p-1.5 cursor-pointer"
-            title="Delete"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      ) : null,
-    },
-  ];
+  const rosterHeaders = [" ", "Client", "Industry", "Services", "MRR", "Since", "Rep", "Status", "Onboarding", "Actions"];
 
   /* ---------- render ---------- */
 
@@ -536,55 +475,200 @@ export default function ClientsPage() {
                   {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
                 </span>
               </div>
-              <DataTable
-                columns={clientColumns}
-                data={paginatedClients}
-                mobileCard={(c, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg p-3 bg-white">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar name={c.name} />
-                        <div>
-                          <div className="font-medium text-[12.5px] text-gray-800">{c.name}</div>
-                          <div className="text-[10px] text-gray-500">{c.website}</div>
+              {/* View toggle */}
+              <div className="hidden md:flex justify-end mb-2">
+                <ViewToggle view={desktopView} onToggle={setDesktopView} />
+              </div>
+
+              {/* Mobile & Desktop card view */}
+              <div className={desktopView === "table" ? "md:hidden space-y-2.5" : "space-y-2.5"}>
+                {paginatedClients.length === 0 && <p className="text-center text-gray-400 py-8 text-xs">No clients found.</p>}
+                {paginatedClients.map((c) => {
+                  const isExp = expanded.has(c.id);
+                  const tasks = getClientTasks(c.name);
+                  return (
+                    <div key={c.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                      <div className="p-3 cursor-pointer" onClick={() => toggleExpand(c.id)}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {isExp ? <ChevronDown size={14} className="text-indigo-600 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 shrink-0" />}
+                            <Avatar name={c.name} />
+                            <div>
+                              <div className="font-medium text-[12.5px] text-gray-800">{c.name}</div>
+                              <div className="text-[10px] text-gray-500">{c.website}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {tasks.length > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 font-medium">
+                                {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                            <StatusBadge status={c.status} />
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-gray-500 mb-1.5 ml-6">{c.industry}</div>
+                        <div className="flex items-center justify-between mb-2 ml-6">
+                          <span className="text-[11px] text-gray-500">{c.rep}</span>
+                          <span className="text-emerald-600 font-mono text-[12px] font-medium">${c.mrr.toLocaleString()}/mo</span>
+                        </div>
+                        <div className="flex items-center justify-between ml-6">
+                          <ServiceBadges services={c.services} />
+                          {canEdit && <div className="flex items-center gap-0.5 shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                            <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                          </div>}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-2 ml-6">
+                          {[
+                            { label: "Stripe", done: c.stripePaymentDone },
+                            { label: "Onboarding", done: c.onboardingFormFilled },
+                            { label: "Agreement", done: c.agreementSigned },
+                          ].map((ch) => (
+                            <div key={ch.label} className={`flex items-center gap-1 text-[10px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}>
+                              <div className={`w-3 h-3 rounded border flex items-center justify-center ${ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}>
+                                {ch.done && <Check size={8} className="text-white" />}
+                              </div>
+                              {ch.label}
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <StatusBadge status={c.status} />
-                    </div>
-                    <div className="text-[11px] text-gray-500 mb-1.5">{c.industry}</div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] text-gray-500">{c.rep}</span>
-                      <span className="text-emerald-600 font-mono text-[12px] font-medium">${c.mrr.toLocaleString()}/mo</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <ServiceBadges services={c.services} />
-                      {canEdit && <div className="flex items-center gap-0.5 shrink-0 ml-2">
-                        <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
-                        <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
-                      </div>}
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-2">
-                      {[
-                        { label: "Stripe", done: c.stripePaymentDone },
-                        { label: "Onboarding", done: c.onboardingFormFilled },
-                        { label: "Agreement", done: c.agreementSigned },
-                      ].map((ch) => (
-                        <div
-                          key={ch.label}
-                          className={`flex items-center gap-1 text-[10px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}
-                        >
-                          <div className={`w-3 h-3 rounded border flex items-center justify-center ${
-                            ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
-                          }`}>
-                            {ch.done && <Check size={8} className="text-white" />}
-                          </div>
-                          {ch.label}
+                      {isExp && (
+                        <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                          {tasks.length === 0 ? (
+                            <p className="text-gray-400 text-[11px]">No backend tasks assigned yet.</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Backend Tasks</div>
+                              {tasks.map((t) => (
+                                <div key={t.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    <ServiceBadge service={t.service} />
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${TASK_STATUS_COLORS[t.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                                      {t.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-gray-500">
+                                    {t.assignedToName ? (
+                                      <span className="font-medium text-gray-700">{t.assignedToName}</span>
+                                    ) : (
+                                      <span className="text-gray-400 italic">Unassigned</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                )}
-              />
+                  );
+                })}
+              </div>
+
+              {/* Desktop table view */}
+              <div className={`overflow-x-auto ${desktopView === "cards" ? "hidden" : "hidden md:block"}`}>
+                <table className="w-full border-collapse text-[12.5px]">
+                  <thead>
+                    <tr>{rosterHeaders.map((h, i) => <th key={i} className="text-left px-3 py-2 text-[9.5px] text-gray-500 uppercase tracking-wider border-b border-gray-200 font-semibold">{h.trim()}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {paginatedClients.map((c) => {
+                      const isExp = expanded.has(c.id);
+                      const tasks = getClientTasks(c.name);
+                      return (
+                        <Fragment key={c.id}>
+                          <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleExpand(c.id)}>
+                            <td className="px-3 py-2.5 w-8">
+                              {isExp ? <ChevronDown size={14} className="text-indigo-600" /> : <ChevronRight size={14} className="text-gray-400" />}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <Avatar name={c.name} />
+                                <div>
+                                  <div className="font-medium text-gray-900">{c.name}</div>
+                                  <div className="text-[10px] text-gray-500">{c.website}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-gray-500">{c.industry}</td>
+                            <td className="px-3 py-2.5"><ServiceBadges services={c.services} /></td>
+                            <td className="px-3 py-2.5 text-emerald-600 font-mono">${c.mrr.toLocaleString()}</td>
+                            <td className="px-3 py-2.5 font-mono text-gray-500">{c.start}</td>
+                            <td className="px-3 py-2.5 text-gray-500">{c.rep}</td>
+                            <td className="px-3 py-2.5"><StatusBadge status={c.status} /></td>
+                            <td className="px-3 py-2.5">
+                              <div className="space-y-1">
+                                {[
+                                  { label: "Stripe", done: c.stripePaymentDone },
+                                  { label: "Onboarding", done: c.onboardingFormFilled },
+                                  { label: "Agreement", done: c.agreementSigned },
+                                ].map((ch) => (
+                                  <div key={ch.label} className={`flex items-center gap-1.5 text-[11px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}>
+                                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}>
+                                      {ch.done && <Check size={10} className="text-white" />}
+                                    </div>
+                                    {ch.label}
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                              {canEdit && (
+                                <div className="flex items-center gap-0.5">
+                                  <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1.5" title="Edit"><Pencil size={13} /></button>
+                                  <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                          {isExp && (
+                            <tr>
+                              <td colSpan={10} className="bg-gray-50 px-6 py-3 border-b border-gray-100">
+                                {tasks.length === 0 ? (
+                                  <p className="text-gray-400 text-[11px] py-1">No backend tasks assigned yet.</p>
+                                ) : (
+                                  <div>
+                                    <div className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Backend Tasks</div>
+                                    <table className="w-full text-[11.5px]">
+                                      <thead>
+                                        <tr>
+                                          {["Service", "Status", "Assigned To", "Priority", "Due"].map((h) => (
+                                            <th key={h} className="text-left px-2 py-1.5 text-[9px] text-gray-500 uppercase tracking-wider font-semibold border-b border-gray-100">{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {tasks.map((t) => (
+                                          <tr key={t.id} className="border-b border-gray-100">
+                                            <td className="px-2 py-2"><ServiceBadge service={t.service} /></td>
+                                            <td className="px-2 py-2">
+                                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${TASK_STATUS_COLORS[t.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                                                {t.status}
+                                              </span>
+                                            </td>
+                                            <td className="px-2 py-2 text-gray-700">{t.assignedToName || <span className="text-gray-400 italic">Unassigned</span>}</td>
+                                            <td className="px-2 py-2 text-gray-500">{t.priority}</td>
+                                            <td className="px-2 py-2 text-gray-500 font-mono">{t.due || "—"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                    {paginatedClients.length === 0 && (
+                      <tr><td colSpan={10} className="text-center text-gray-400 py-8 text-xs">No clients found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
                   <span className="text-[11px] text-gray-500">
@@ -660,12 +744,12 @@ export default function ClientsPage() {
               </div>
             )}
             <Card title="Create Backend Task">
-              <FormGroup label="Client">
+              <FormGroup label="Client" required>
                 <Select
                   value={sendClientId}
                   onChange={(e) => setSendClientId(e.target.value)}
                   error={sendAttempted && !sendClientId}
-                >
+>
                   <option value="">Select client...</option>
                   {clientsList.map((c) => {
                     const unassigned = unassignedCountMap[c.id] ?? 0;
@@ -678,7 +762,7 @@ export default function ClientsPage() {
                 </Select>
               </FormGroup>
 
-              <FormGroup label="Service / Task Type">
+              <FormGroup label="Service / Task Type" required>
                 <Select
                   value={sendService}
                   onChange={(e) => setSendService(e.target.value)}
@@ -698,7 +782,7 @@ export default function ClientsPage() {
                 </Select>
               </FormGroup>
 
-              <FormGroup label="Assign To (Employee)">
+              <FormGroup label="Assign To (Employee)" required>
                 <Select
                   value={sendTeam}
                   onChange={(e) => setSendTeam(e.target.value)}
@@ -754,18 +838,22 @@ export default function ClientsPage() {
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center gap-2 bg-gray-50 border border-gray-200 border-dashed rounded-lg px-3 py-2.5 cursor-pointer hover:border-indigo-400 transition-colors">
-                    <Paperclip size={13} className="text-gray-400" />
-                    <span className="text-[12px] text-gray-500">Click to attach a file</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) setSendFile(f);
-                      }}
-                    />
-                  </label>
+                  <div>
+                    <label className="flex items-center gap-2 bg-gray-50 border border-gray-200 border-dashed rounded-lg px-3 py-2.5 cursor-pointer hover:border-indigo-400 transition-colors">
+                      <Paperclip size={13} className="text-gray-400" />
+                      <span className="text-[12px] text-gray-500">Click to attach a file</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setSendFile(f);
+                        }}
+                      />
+                    </label>
+                    <p className="text-[10px] text-gray-400 mt-1">Max 50MB. Allowed: PDF, PNG, JPG, GIF, WEBP, DOC, DOCX, XLS, XLSX, CSV, TXT, ZIP</p>
+                  </div>
                 )}
               </FormGroup>
 
@@ -805,7 +893,7 @@ export default function ClientsPage() {
         }
       >
         <FormRow>
-          <FormGroup label="Business Name">
+          <FormGroup label="Business Name" required>
             <Input
               placeholder="Business name"
               value={formName}
@@ -836,12 +924,13 @@ export default function ClientsPage() {
               onChange={(e) => setFormContact(e.target.value)}
             />
           </FormGroup>
-          <FormGroup label="Email">
+          <FormGroup label="Email" required>
             <Input
               type="email"
               placeholder="email@example.com"
               value={formEmail}
               onChange={(e) => setFormEmail(e.target.value)}
+              error={attempted && !formEmail}
             />
           </FormGroup>
         </FormRow>

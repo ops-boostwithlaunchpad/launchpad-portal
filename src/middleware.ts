@@ -1,32 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "launchpad-secret-key-change-in-prod"
-);
-const COOKIE_NAME = "lp_token";
-
-const ROLE_ROUTES: Record<string, string[]> = {
-  admin: ["/dashboard"],
-  subadmin: ["/dashboard"],
-  sales: ["/dashboard/sales", "/dashboard/clients"],
-  backend: ["/dashboard/backend", "/dashboard/clients"],
-  employee: ["/dashboard/my-tasks"],
-  client: ["/dashboard/portal", "/dashboard/cancel"],
-  agent: ["/dashboard/sales/master"],
-  agency: ["/dashboard/sales"],
-};
-
-const ROLE_DEFAULT: Record<string, string> = {
-  admin: "/dashboard/sales/master",
-  subadmin: "/dashboard/sales/master",
-  sales: "/dashboard/sales/master",
-  backend: "/dashboard/backend",
-  employee: "/dashboard/my-tasks",
-  client: "/dashboard/portal",
-  agent: "/dashboard/sales/master",
-  agency: "/dashboard/sales/master",
-};
+import { JWT_SECRET, COOKIE_NAME, getAllowedRoutes, getDefaultRoute } from "./lib/auth";
+import type { Role } from "./lib/types";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,15 +21,14 @@ export async function middleware(request: NextRequest) {
   // Verify token
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    const role = payload.role as string;
-    const allowed = ROLE_ROUTES[role] || [];
+    const role = payload.role as Role;
+    const allowed = getAllowedRoutes(role);
 
     // Check if user has access to this route
     const hasAccess = allowed.some((prefix) => pathname.startsWith(prefix));
 
     if (!hasAccess) {
-      // Redirect to their default page
-      const defaultRoute = ROLE_DEFAULT[role] || "/login";
+      const defaultRoute = getDefaultRoute(role);
       return NextResponse.redirect(new URL(defaultRoute, request.url));
     }
 

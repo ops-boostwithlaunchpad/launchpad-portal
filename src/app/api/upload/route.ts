@@ -19,8 +19,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Validate file size (max 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "File too large. Maximum size is 50MB." }, { status: 400 });
+    }
+
+    // Validate file extension
+    const ALLOWED_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "gif", "webp", "doc", "docx", "xls", "xlsx", "csv", "txt", "zip"];
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json({ error: `File type .${ext} is not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}` }, { status: 400 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split(".").pop() || "bin";
     const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const path = `task-files/${safeName}`;
 

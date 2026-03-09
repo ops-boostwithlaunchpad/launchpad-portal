@@ -8,15 +8,7 @@ import { User } from "@/entity/User";
 import { Task } from "@/entity/Task";
 import { requireRole } from "@/lib/apiAuth";
 import { In } from "typeorm";
-
-const SERVICE_TEAM_MAP: Record<string, string> = {
-  "Local SEO": "SEO & GBP Team",
-  "AI SEO": "AI SEO Team",
-  LSA: "Paid Ads Team",
-  "Google Ads": "Paid Ads Team",
-  "Meta Ads": "Paid Ads Team",
-  Automation: "Automation Team (n8n)",
-};
+import { autoSendToBackend, createTaskForService } from "@/lib/taskCreation";
 
 export async function GET() {
   const { user, error } = await requireRole("admin", "subadmin", "sales", "backend", "employee", "client", "agent", "agency");
@@ -55,33 +47,6 @@ export async function GET() {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-async function autoSendToBackend(db: Awaited<ReturnType<typeof getDB>>, client: Client) {
-  if (
-    client.stripePaymentDone &&
-    client.onboardingFormFilled &&
-    client.agreementSigned &&
-    !client.sentToBackend
-  ) {
-    const taskRepo = db.getRepository(Task);
-    for (const svc of client.services) {
-      const team = SERVICE_TEAM_MAP[svc] || "Technical Team";
-      await taskRepo.save({
-        client: client.name,
-        service: svc,
-        team,
-        priority: "Normal",
-        due: "",
-        notes: `Auto-created: ${client.name} onboarding — ${svc}`,
-        status: "Queued",
-        logs: [],
-      });
-    }
-    const clientRepo = db.getRepository(Client);
-    client.sentToBackend = true;
-    await clientRepo.save(client);
   }
 }
 
@@ -134,31 +99,21 @@ export async function PUT(request: NextRequest) {
       const removedServices = oldServices.filter((s) => !newServices.includes(s));
       if (removedServices.length > 0) {
         await taskRepo.delete({
-          client: oldName,
+          clientId: updated.id,
           service: In(removedServices),
         });
       }
 
       // If client name changed, update all their tasks
       if (oldName !== updated.name) {
-        await taskRepo.update({ client: oldName }, { client: updated.name });
+        await taskRepo.update({ clientId: updated.id }, { client: updated.name });
       }
 
       // Create tasks for newly added services (if already sent to backend)
       if (updated.sentToBackend) {
         const addedServices = newServices.filter((s) => !oldServices.includes(s));
         for (const svc of addedServices) {
-          const team = SERVICE_TEAM_MAP[svc] || "Technical Team";
-          await taskRepo.save({
-            client: updated.name,
-            service: svc,
-            team,
-            priority: "Normal",
-            due: "",
-            notes: `Auto-created: ${updated.name} — ${svc}`,
-            status: "Queued",
-            logs: [],
-          });
+          await createTaskForService(db, updated, svc, "");
         }
       }
 
@@ -186,11 +141,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
     }
 
-    // Find client to get name, then delete their tasks
-    const client = await clientRepo.findOneBy({ id: Number(id) });
-    if (client) {
-      await taskRepo.delete({ client: client.name });
-    }
+    // Delete all tasks linked to this client
+    await taskRepo.delete({ clientId: Number(id) });
 
     await clientRepo.delete(id);
     return NextResponse.json({ success: true });

@@ -2,6 +2,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from "typeorm";
 
 @Entity("lp_agents")
@@ -29,4 +31,10 @@ export class AgentEntity {
 
   @Column()
   status!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }
