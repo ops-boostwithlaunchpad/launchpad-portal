@@ -38,4 +38,16 @@ export class Client {
 
   @Column()
   status!: string;
+
+  @Column({ default: false })
+  stripePaymentDone!: boolean;
+
+  @Column({ default: false })
+  onboardingFormFilled!: boolean;
+
+  @Column({ default: false })
+  agreementSigned!: boolean;
+
+  @Column({ default: false })
+  sentToBackend!: boolean;
 }

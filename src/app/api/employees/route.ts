@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/apiAuth";
 
 // GET all employees (admin only)
 export async function GET() {
-  const { error } = await requireRole("admin", "subadmin");
+  const { error } = await requireRole("admin", "subadmin", "sales", "backend");
   if (error) return error;
 
   try {

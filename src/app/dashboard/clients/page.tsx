@@ -8,7 +8,6 @@ import {
   StatusBadge,
   ServiceBadge,
   ServiceBadges,
-  PrioBadge,
 } from "@/components/Badge";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -28,11 +27,9 @@ import {
   Task,
   SERVICE_OPTIONS,
   SVC_DESC,
-  SVC_BADGE,
-  TEAMS,
 } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Check, Paperclip, X } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
@@ -54,8 +51,6 @@ export default function ClientsPage() {
   const [tasksList, setTasksList] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [sentTasks, setSentTasks] = useState<Task[]>([]);
-
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -72,6 +67,9 @@ export default function ClientsPage() {
   const [formMrr, setFormMrr] = useState("");
   const [formRep, setFormRep] = useState("");
   const [formWebsite, setFormWebsite] = useState("");
+  const [formStripe, setFormStripe] = useState(false);
+  const [formOnboarding, setFormOnboarding] = useState(false);
+  const [formAgreement, setFormAgreement] = useState(false);
   const [saving, setSaving] = useState(false);
   const [attempted, setAttempted] = useState(false);
 
@@ -82,6 +80,9 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 20;
 
+  // Employees list for team assignment
+  const [employees, setEmployees] = useState<{ id: number; name: string; department: string | null }[]>([]);
+
   // Send to backend form state
   const [sendClientId, setSendClientId] = useState("");
   const [sendService, setSendService] = useState("");
@@ -89,8 +90,10 @@ export default function ClientsPage() {
   const [sendPriority, setSendPriority] = useState("Normal");
   const [sendDue, setSendDue] = useState("");
   const [sendNotes, setSendNotes] = useState("");
+  const [sendFile, setSendFile] = useState<File | null>(null);
   const [sendSaving, setSendSaving] = useState(false);
   const [sendAttempted, setSendAttempted] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
 
   /* ---------- fetch data ---------- */
 
@@ -98,10 +101,12 @@ export default function ClientsPage() {
     Promise.all([
       fetch("/api/clients").then((r) => r.json()),
       fetch("/api/tasks").then((r) => r.json()),
+      fetch("/api/employees").then((r) => r.json()).catch(() => []),
     ])
-      .then(([c, t]) => {
+      .then(([c, t, e]) => {
         setClientsList(Array.isArray(c) ? c : []);
         setTasksList(Array.isArray(t) ? t : []);
+        setEmployees(Array.isArray(e) ? e : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -135,6 +140,36 @@ export default function ClientsPage() {
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [search, filterStatus, filterService]);
 
+  // Selected client's services for Send to Backend
+  const selectedClient = clientsList.find((c) => c.id === Number(sendClientId));
+  const selectedClientServices = selectedClient?.services || [];
+
+  // Services that already have tasks assigned for the selected client
+  const assignedServicesForClient = useMemo(() => {
+    if (!selectedClient) return new Set<string>();
+    return new Set(
+      tasksList.filter((t) => t.client === selectedClient.name).map((t) => t.service)
+    );
+  }, [selectedClient, tasksList]);
+
+  // Unassigned task counts per client (services without a backend task)
+  const unassignedCountMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const c of clientsList) {
+      const clientTasks = tasksList.filter((t) => t.client === c.name);
+      const assignedSvcs = new Set(clientTasks.map((t) => t.service));
+      map[c.id] = c.services.filter((s) => !assignedSvcs.has(s)).length;
+    }
+    return map;
+  }, [clientsList, tasksList]);
+
+  // Reset service when client changes and selected service is no longer valid
+  useEffect(() => {
+    if (sendService && selectedClientServices.length > 0 && !selectedClientServices.includes(sendService)) {
+      setSendService("");
+    }
+  }, [sendClientId]);
+
   function toggleService(svc: string) {
     setFormServices((prev) =>
       prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc]
@@ -150,6 +185,9 @@ export default function ClientsPage() {
     setFormMrr("");
     setFormRep("");
     setFormWebsite("");
+    setFormStripe(false);
+    setFormOnboarding(false);
+    setFormAgreement(false);
     setEditTarget(null);
     setAttempted(false);
   }
@@ -164,6 +202,9 @@ export default function ClientsPage() {
     setFormMrr(String(c.mrr));
     setFormRep(c.rep);
     setFormWebsite(c.website);
+    setFormStripe(c.stripePaymentDone);
+    setFormOnboarding(c.onboardingFormFilled);
+    setFormAgreement(c.agreementSigned);
     setModalOpen(true);
   }
 
@@ -172,66 +213,72 @@ export default function ClientsPage() {
     if (!formName) return;
     setSaving(true);
     try {
-    if (editTarget) {
-      const updated: Client = {
-        id: editTarget.id,
-        name: formName,
-        industry: formIndustry || "Other",
-        contact: formContact,
-        email: formEmail,
-        services: formServices,
-        mrr: Number(formMrr) || 0,
-        start: editTarget.start,
-        rep: formRep || "Launchpad",
-        website: formWebsite,
-        status: editTarget.status,
-      };
-      fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      })
-        .then((r) => r.json())
-        .then((saved) => {
+      if (editTarget) {
+        const updated: Client = {
+          id: editTarget.id,
+          name: formName,
+          industry: formIndustry || "Other",
+          contact: formContact,
+          email: formEmail,
+          services: formServices,
+          mrr: Number(formMrr) || 0,
+          start: editTarget.start,
+          rep: formRep || "Launchpad",
+          website: formWebsite,
+          status: editTarget.status,
+          stripePaymentDone: formStripe,
+          onboardingFormFilled: formOnboarding,
+          agreementSigned: formAgreement,
+          sentToBackend: editTarget.sentToBackend,
+        };
+        try {
+          const r = await fetch("/api/clients", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updated),
+          });
+          const saved = await r.json();
           setClientsList((prev) =>
             prev.map((c) => (c.id === editTarget.id ? saved : c))
           );
-        })
-        .catch(() => {
+        } catch {
           setClientsList((prev) =>
             prev.map((c) => (c.id === editTarget.id ? updated : c))
           );
-        });
-    } else {
-      const newClient: Client = {
-        id: Math.max(0, ...clientsList.map((c) => c.id)) + 1,
-        name: formName,
-        industry: formIndustry || "Other",
-        contact: formContact,
-        email: formEmail,
-        services: formServices,
-        mrr: Number(formMrr) || 0,
-        start: new Date().toISOString().slice(0, 10),
-        rep: formRep || "Launchpad",
-        website: formWebsite,
-        status: "Active",
-      };
-      fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newClient),
-      })
-        .then((r) => r.json())
-        .then((saved) => {
+        }
+      } else {
+        const newClient: Client = {
+          id: Math.max(0, ...clientsList.map((c) => c.id)) + 1,
+          name: formName,
+          industry: formIndustry || "Other",
+          contact: formContact,
+          email: formEmail,
+          services: formServices,
+          mrr: Number(formMrr) || 0,
+          start: new Date().toISOString().slice(0, 10),
+          rep: formRep || "Launchpad",
+          website: formWebsite,
+          status: "Active",
+          stripePaymentDone: formStripe,
+          onboardingFormFilled: formOnboarding,
+          agreementSigned: formAgreement,
+          sentToBackend: false,
+        };
+        try {
+          const r = await fetch("/api/clients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newClient),
+          });
+          const saved = await r.json();
           setClientsList((prev) => [...prev, saved]);
-        })
-        .catch(() => {
+        } catch {
           setClientsList((prev) => [...prev, newClient]);
-        });
-    }
+        }
+      }
 
-    setModalOpen(false);
-    resetAddForm();
+      setModalOpen(false);
+      resetAddForm();
     } finally {
       setSaving(false);
     }
@@ -258,16 +305,38 @@ export default function ClientsPage() {
     const client = clientsList.find((c) => c.id === Number(sendClientId));
     if (!client) return;
     setSendSaving(true);
+
+    // Upload file if selected
+    let fileUrl: string | null = null;
+    let fileName: string | null = null;
+    if (sendFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", sendFile);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
+        if (uploadData.fileUrl) {
+          fileUrl = uploadData.fileUrl;
+          fileName = uploadData.fileName;
+        }
+      } catch { /* file upload failed, continue without file */ }
+    }
+
+    const emp = employees.find((e) => e.name === sendTeam);
     const newTask: Task = {
       id: Math.max(0, ...tasksList.map((t) => t.id)) + 1,
       client: client.name,
       service: sendService,
-      team: sendTeam,
+      team: emp?.department || sendTeam,
       priority: sendPriority as Task["priority"],
       due: sendDue,
       notes: sendNotes,
       status: "Queued",
       logs: [],
+      assignedTo: emp?.id || null,
+      assignedToName: emp?.name || null,
+      fileUrl,
+      fileName,
     };
     try {
       const r = await fetch("/api/tasks", {
@@ -277,10 +346,10 @@ export default function ClientsPage() {
       });
       const saved = await r.json();
       setTasksList((prev) => [...prev, saved]);
-      setSentTasks((prev) => [saved, ...prev]);
+      setSendSuccess(`${sendService} task for ${client.name} assigned to ${emp?.name || sendTeam}`);
+      setTimeout(() => setSendSuccess(null), 5000);
     } catch {
       setTasksList((prev) => [...prev, newTask]);
-      setSentTasks((prev) => [newTask, ...prev]);
     }
     setSendClientId("");
     setSendService("");
@@ -288,6 +357,7 @@ export default function ClientsPage() {
     setSendPriority("Normal");
     setSendDue("");
     setSendNotes("");
+    setSendFile(null);
     setSendAttempted(false);
     setSendSaving(false);
   }
@@ -347,6 +417,34 @@ export default function ClientsPage() {
       key: "status",
       header: "Status",
       render: (c: Client) => <StatusBadge status={c.status} />,
+    },
+    {
+      key: "onboarding",
+      header: "Onboarding",
+      render: (c: Client) => {
+        const checks = [
+          { label: "Stripe", done: c.stripePaymentDone },
+          { label: "Onboarding", done: c.onboardingFormFilled },
+          { label: "Agreement", done: c.agreementSigned },
+        ];
+        return (
+          <div className="space-y-1">
+            {checks.map((ch) => (
+              <div
+                key={ch.label}
+                className={`flex items-center gap-1.5 text-[11px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}
+              >
+                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                  ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
+                }`}>
+                  {ch.done && <Check size={10} className="text-white" />}
+                </div>
+                {ch.label}
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     {
       key: "actions",
@@ -465,6 +563,25 @@ export default function ClientsPage() {
                         <button onClick={() => setDeleteTarget(c)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5" title="Delete"><Trash2 size={13} /></button>
                       </div>}
                     </div>
+                    <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                      {[
+                        { label: "Stripe", done: c.stripePaymentDone },
+                        { label: "Onboarding", done: c.onboardingFormFilled },
+                        { label: "Agreement", done: c.agreementSigned },
+                      ].map((ch) => (
+                        <div
+                          key={ch.label}
+                          className={`flex items-center gap-1 text-[10px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}
+                        >
+                          <div className={`w-3 h-3 rounded border flex items-center justify-center ${
+                            ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
+                          }`}>
+                            {ch.done && <Check size={8} className="text-white" />}
+                          </div>
+                          {ch.label}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               />
@@ -534,8 +651,14 @@ export default function ClientsPage() {
 
         {/* =================== TAB 3: SEND TO BACKEND =================== */}
         {activeTab === "Send to Backend" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-            {/* Left: Create task form */}
+          <div className="max-w-xl">
+            {sendSuccess && (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-3 text-[13px] text-emerald-700">
+                <Check size={15} className="shrink-0" />
+                <span>{sendSuccess}</span>
+                <button onClick={() => setSendSuccess(null)} className="ml-auto text-emerald-400 hover:text-emerald-600 cursor-pointer"><X size={14} /></button>
+              </div>
+            )}
             <Card title="Create Backend Task">
               <FormGroup label="Client">
                 <Select
@@ -544,11 +667,14 @@ export default function ClientsPage() {
                   error={sendAttempted && !sendClientId}
                 >
                   <option value="">Select client...</option>
-                  {clientsList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
+                  {clientsList.map((c) => {
+                    const unassigned = unassignedCountMap[c.id] ?? 0;
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{unassigned > 0 ? ` (${unassigned} unassigned)` : " (all assigned)"}
+                      </option>
+                    );
+                  })}
                 </Select>
               </FormGroup>
 
@@ -558,25 +684,30 @@ export default function ClientsPage() {
                   onChange={(e) => setSendService(e.target.value)}
                   error={sendAttempted && !sendService}
                 >
-                  <option value="">Select service...</option>
-                  {SERVICE_OPTIONS.map((svc) => (
-                    <option key={svc} value={svc}>
-                      {svc} -- {SVC_DESC[svc]}
-                    </option>
-                  ))}
+                  <option value="">
+                    {sendClientId ? "Select service..." : "Select a client first..."}
+                  </option>
+                  {selectedClientServices.map((svc) => {
+                    const alreadyAssigned = assignedServicesForClient.has(svc);
+                    return (
+                      <option key={svc} value={svc} disabled={alreadyAssigned}>
+                        {svc} — {alreadyAssigned ? "✓ Already assigned" : (SVC_DESC[svc] || "")}
+                      </option>
+                    );
+                  })}
                 </Select>
               </FormGroup>
 
-              <FormGroup label="Backend Team">
+              <FormGroup label="Assign To (Employee)">
                 <Select
                   value={sendTeam}
                   onChange={(e) => setSendTeam(e.target.value)}
                   error={sendAttempted && !sendTeam}
                 >
-                  <option value="">Select team...</option>
-                  {TEAMS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  <option value="">Select employee...</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name} — {emp.department || "No dept"}
                     </option>
                   ))}
                 </Select>
@@ -610,6 +741,34 @@ export default function ClientsPage() {
                 />
               </FormGroup>
 
+              <FormGroup label="Attachment (optional)">
+                {sendFile ? (
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                    <Paperclip size={13} className="text-gray-400 shrink-0" />
+                    <span className="text-[12px] text-gray-700 truncate flex-1">{sendFile.name}</span>
+                    <button
+                      onClick={() => setSendFile(null)}
+                      className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 bg-gray-50 border border-gray-200 border-dashed rounded-lg px-3 py-2.5 cursor-pointer hover:border-indigo-400 transition-colors">
+                    <Paperclip size={13} className="text-gray-400" />
+                    <span className="text-[12px] text-gray-500">Click to attach a file</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) setSendFile(f);
+                      }}
+                    />
+                  </label>
+                )}
+              </FormGroup>
+
               <Button
                 className="w-full"
                 onClick={handleSendToBackend}
@@ -617,39 +776,6 @@ export default function ClientsPage() {
               >
                 Send to Backend
               </Button>
-            </Card>
-
-            {/* Right: Recently Sent */}
-            <Card title="Recently Sent">
-              {sentTasks.length === 0 ? (
-                <p className="text-gray-400 text-xs py-6 text-center">
-                  No tasks sent yet.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {sentTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-3"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[12.5px] font-semibold text-gray-900">
-                          {task.client}
-                        </span>
-                        <PrioBadge priority={task.priority} />
-                      </div>
-                      <p className="text-[11px] text-gray-500">
-                        {task.service} &middot; {task.team}
-                      </p>
-                      {task.due && (
-                        <p className="text-[10px] text-gray-400 font-mono mt-1">
-                          Due: {task.due}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </Card>
           </div>
         )}
@@ -757,6 +883,26 @@ export default function ClientsPage() {
             value={formWebsite}
             onChange={(e) => setFormWebsite(e.target.value)}
           />
+        </FormGroup>
+
+        <FormGroup label="Onboarding Checklist">
+          <div className="flex flex-wrap gap-4 mt-1">
+            <Checkbox
+              label="Stripe Payment Done"
+              checked={formStripe}
+              onChange={() => setFormStripe(!formStripe)}
+            />
+            <Checkbox
+              label="Onboarding Form Filled"
+              checked={formOnboarding}
+              onChange={() => setFormOnboarding(!formOnboarding)}
+            />
+            <Checkbox
+              label="Agreement Signed"
+              checked={formAgreement}
+              onChange={() => setFormAgreement(!formAgreement)}
+            />
+          </div>
         </FormGroup>
       </Modal>
 

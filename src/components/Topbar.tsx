@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { RefreshCcw } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 
 interface TopbarProps {
@@ -8,10 +10,25 @@ interface TopbarProps {
 }
 
 export function Topbar({ title, children }: TopbarProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    window.location.reload();
+  }
+
   return (
     <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 sticky top-0 z-10">
       <h1 className="text-sm font-semibold text-gray-900 pl-10 lg:pl-0 shrink-0 mr-auto">{title}</h1>
-      <div className="shrink-0 lg:hidden">
+      <div className="shrink-0 lg:hidden flex items-center gap-1">
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 cursor-pointer"
+          title="Refresh"
+        >
+          <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
         <NotificationBell />
       </div>
       {children && (
@@ -19,7 +36,15 @@ export function Topbar({ title, children }: TopbarProps) {
           {children}
         </div>
       )}
-      <div className="shrink-0 hidden lg:block">
+      <div className="shrink-0 hidden lg:flex items-center gap-1">
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 cursor-pointer"
+          title="Refresh"
+        >
+          <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
         <NotificationBell />
       </div>
     </div>

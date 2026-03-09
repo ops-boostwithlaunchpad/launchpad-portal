@@ -40,6 +40,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { id, ...data } = body;
     const newTask = await taskRepo.save({ ...data, logs: [] });
+
+    // Send notifications if task is assigned to an employee
+    const sb = getSupabase();
+    if (sb && newTask.assignedTo) {
+      // Notify the assigned employee
+      await sb.from("lp_notifications").insert({
+        user_id: newTask.assignedTo,
+        title: "New Task Assigned",
+        message: `You have been assigned: ${newTask.service} for ${newTask.client}`,
+        type: "task_assigned",
+        task_id: newTask.id,
+      });
+
+      // Notify the client
+      const clientUser = await db.getRepository(User).findOneBy({ name: newTask.client, role: "client" });
+      if (clientUser) {
+        await sb.from("lp_notifications").insert({
+          user_id: clientUser.id,
+          title: "Team Member Assigned",
+          message: `${newTask.assignedToName || "A team member"} has been assigned to your ${newTask.service} task`,
+          type: "task_assigned",
+          task_id: newTask.id,
+        });
+      }
+    }
+
     return NextResponse.json(newTask, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -7,7 +7,7 @@ import { Button } from "@/components/Button";
 import { ServiceBadge, PrioBadge, StatusBadge } from "@/components/Badge";
 import { useAuth } from "@/lib/AuthContext";
 import type { Task } from "@/lib/types";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, Paperclip } from "lucide-react";
 
 export default function MyTasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -58,7 +58,7 @@ export default function MyTasksPage() {
     );
   }
 
-  const isQueued = (s: string) => s === "queued" || s === "assigned";
+  const isQueued = (s: string) => s.toLowerCase() === "queued" || s.toLowerCase() === "assigned";
   const queueCount = tasks.filter((t) => isQueued(t.status)).length;
   const progressCount = tasks.filter((t) => t.status === "In Progress").length;
   const doneCount = tasks.filter((t) => t.status === "Done").length;
@@ -141,6 +141,18 @@ export default function MyTasksPage() {
                   <div className="text-[12px] text-gray-500 mb-3 leading-relaxed">
                     {task.notes}
                   </div>
+                )}
+
+                {task.fileUrl && (
+                  <a
+                    href={task.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1.5 mb-3 transition-colors"
+                  >
+                    <Paperclip size={12} />
+                    {task.fileName || "Download File"}
+                  </a>
                 )}
 
                 {/* Status transition buttons */}

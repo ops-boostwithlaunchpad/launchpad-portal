@@ -38,4 +38,10 @@ export class Task {
 
   @Column({ type: "varchar", nullable: true })
   assignedToName!: string | null;
+
+  @Column({ type: "varchar", nullable: true })
+  fileUrl!: string | null;
+
+  @Column({ type: "varchar", nullable: true })
+  fileName!: string | null;
 }

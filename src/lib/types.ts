@@ -78,6 +78,10 @@ export interface Client {
   rep: string;
   website: string;
   status: "Active" | "Paused" | "Churned";
+  stripePaymentDone: boolean;
+  onboardingFormFilled: boolean;
+  agreementSigned: boolean;
+  sentToBackend: boolean;
 }
 
 export interface Task {
@@ -92,6 +96,8 @@ export interface Task {
   logs: string[];
   assignedTo?: number | null;
   assignedToName?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
 }
 
 export type ServiceType =
