@@ -11,7 +11,7 @@ import { Modal } from "@/components/Modal";
 import { FormGroup, FormRow, Input, Select, Checkbox, Textarea } from "@/components/FormGroup";
 import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { Deal, INDUSTRIES, SERVICE_OPTIONS } from "@/lib/types";
+import { Deal, Agency, Agent, INDUSTRIES, SERVICE_OPTIONS } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
 import { Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
 
@@ -26,11 +26,19 @@ const APPROVAL_COLORS: Record<string, string> = {
 const emptyForm = {
   client: "",
   industry: "",
+  agency: "",
   agent: "",
   services: [] as string[],
   mrr: "",
   stage: "Prospect" as Deal["stage"],
   close: "",
+  contact: "",
+  email: "",
+  website: "",
+  rep: "",
+  stripePaymentDone: false,
+  onboardingFormFilled: false,
+  agreementSigned: false,
 };
 
 export default function SalesMasterPage() {
@@ -58,8 +66,25 @@ export default function SalesMasterPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
 
-  // Agency agents list
+  // Agency agents list (for agency role)
   const [agencyAgents, setAgencyAgents] = useState<{ id: number; name: string }[]>([]);
+
+  // Agencies & agents lists (for admin role)
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [allAgents, setAllAgents] = useState<Agent[]>([]);
+
+  // Filtered agents based on selected agency in the form
+  const filteredAgents = form.agency
+    ? allAgents.filter((a) => a.agency === form.agency)
+    : allAgents;
+
+  /* ---------- fetch deals ---------- */
+  function refreshDeals() {
+    fetch("/api/deals")
+      .then((r) => r.json())
+      .then((data) => setDeals(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }
 
   /* ---------- fetch deals on mount ---------- */
   useEffect(() => {
@@ -77,10 +102,30 @@ export default function SalesMasterPage() {
       );
     }
 
+    if (canEdit) {
+      fetches.push(
+        fetch("/api/agencies")
+          .then((r) => r.json())
+          .then((data) => setAgencies(Array.isArray(data) ? data : []))
+          .catch(() => {}),
+        fetch("/api/agents")
+          .then((r) => r.json())
+          .then((data) => setAllAgents(Array.isArray(data) ? data : []))
+          .catch(() => {})
+      );
+    }
+
     Promise.all(fetches)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [isAgency]);
+  }, [isAgency, canEdit]);
+
+  /* ---------- refetch deals on window focus ---------- */
+  useEffect(() => {
+    function onFocus() { refreshDeals(); }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   /* ---------- derived ---------- */
   const approvedDeals = deals.filter((d) => d.approval !== "Rejected");
@@ -116,11 +161,19 @@ export default function SalesMasterPage() {
     setForm({
       client: d.client,
       industry: d.industry,
+      agency: d.agency || "",
       agent: d.agent,
       services: [...d.services],
       mrr: String(d.mrr),
       stage: d.stage,
       close: d.close,
+      contact: d.contact || "",
+      email: d.email || "",
+      website: d.website || "",
+      rep: d.rep || "",
+      stripePaymentDone: d.stripePaymentDone || false,
+      onboardingFormFilled: d.onboardingFormFilled || false,
+      agreementSigned: d.agreementSigned || false,
     });
     setModalOpen(true);
   }
@@ -135,11 +188,19 @@ export default function SalesMasterPage() {
         ...(editTarget ? { id: editTarget.id } : {}),
         client: form.client,
         industry: form.industry,
+        agency: form.agency,
         agent: form.agent || "Direct",
         services: form.services.length > 0 ? form.services : ["Local SEO"],
         mrr: Number(form.mrr),
         stage: form.stage,
         close: form.close || new Date().toISOString().slice(0, 10),
+        contact: form.contact,
+        email: form.email,
+        website: form.website,
+        rep: form.rep || "Launchpad",
+        stripePaymentDone: form.stripePaymentDone,
+        onboardingFormFilled: form.onboardingFormFilled,
+        agreementSigned: form.agreementSigned,
       };
       const res = await fetch("/api/deals", {
         method: editTarget ? "PUT" : "POST",
@@ -475,8 +536,10 @@ export default function SalesMasterPage() {
             This deal will be submitted for admin approval before it becomes active.
           </div>
         )}
+
+        {/* Client Info */}
         <FormRow>
-          <FormGroup label="Client Name">
+          <FormGroup label="Client / Business Name">
             <Input
               placeholder="e.g. Acme Corp"
               value={form.client}
@@ -500,8 +563,44 @@ export default function SalesMasterPage() {
           </FormGroup>
         </FormRow>
 
-        <FormGroup label="Agent">
-          {isAgency ? (
+        <FormRow>
+          <FormGroup label="Contact Name">
+            <Input
+              placeholder="Contact name"
+              value={form.contact}
+              onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            />
+          </FormGroup>
+          <FormGroup label="Email">
+            <Input
+              type="email"
+              placeholder="email@example.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup label="Website">
+            <Input
+              placeholder="example.com"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+            />
+          </FormGroup>
+          <FormGroup label="Account Rep">
+            <Input
+              placeholder="Launchpad"
+              value={form.rep}
+              onChange={(e) => setForm({ ...form, rep: e.target.value })}
+            />
+          </FormGroup>
+        </FormRow>
+
+        {/* Agency / Agent */}
+        {isAgency ? (
+          <FormGroup label="Agent">
             <Select
               value={form.agent}
               onChange={(e) => setForm({ ...form, agent: e.target.value })}
@@ -512,15 +611,35 @@ export default function SalesMasterPage() {
                 <option key={a.id} value={a.name}>{a.name}</option>
               ))}
             </Select>
-          ) : (
-            <Input
-              placeholder="e.g. Direct or agency name"
-              value={form.agent}
-              onChange={(e) => setForm({ ...form, agent: e.target.value })}
-            />
-          )}
-        </FormGroup>
+          </FormGroup>
+        ) : (
+          <FormRow>
+            <FormGroup label="Agency">
+              <Select
+                value={form.agency}
+                onChange={(e) => setForm({ ...form, agency: e.target.value, agent: "" })}
+              >
+                <option value="">Direct (no agency)</option>
+                {agencies.map((a) => (
+                  <option key={a.id} value={a.agency}>{a.agency}</option>
+                ))}
+              </Select>
+            </FormGroup>
+            <FormGroup label="Agent">
+              <Select
+                value={form.agent}
+                onChange={(e) => setForm({ ...form, agent: e.target.value })}
+              >
+                <option value="">{form.agency ? "Select agent..." : "Direct"}</option>
+                {filteredAgents.map((a) => (
+                  <option key={a.id} value={a.name}>{a.name}</option>
+                ))}
+              </Select>
+            </FormGroup>
+          </FormRow>
+        )}
 
+        {/* Services */}
         <FormGroup label="Services">
           <div className="flex flex-wrap gap-3 mt-1">
             {SERVICE_OPTIONS.map((svc) => (
@@ -534,6 +653,7 @@ export default function SalesMasterPage() {
           </div>
         </FormGroup>
 
+        {/* Deal Details */}
         <FormRow>
           <FormGroup label="MRR ($)">
             <Input
@@ -566,6 +686,27 @@ export default function SalesMasterPage() {
             value={form.close}
             onChange={(e) => setForm({ ...form, close: e.target.value })}
           />
+        </FormGroup>
+
+        {/* Onboarding Checklist */}
+        <FormGroup label="Onboarding Checklist">
+          <div className="flex flex-wrap gap-4 mt-1">
+            <Checkbox
+              label="Stripe Payment Done"
+              checked={form.stripePaymentDone}
+              onChange={() => setForm({ ...form, stripePaymentDone: !form.stripePaymentDone })}
+            />
+            <Checkbox
+              label="Onboarding Form Filled"
+              checked={form.onboardingFormFilled}
+              onChange={() => setForm({ ...form, onboardingFormFilled: !form.onboardingFormFilled })}
+            />
+            <Checkbox
+              label="Agreement Signed"
+              checked={form.agreementSigned}
+              onChange={() => setForm({ ...form, agreementSigned: !form.agreementSigned })}
+            />
+          </div>
         </FormGroup>
       </Modal>
 

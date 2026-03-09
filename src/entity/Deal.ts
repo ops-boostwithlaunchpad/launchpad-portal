@@ -18,6 +18,9 @@ export class Deal {
   @Column()
   agent!: string;
 
+  @Column({ type: "varchar", nullable: true, default: "" })
+  agency!: string;
+
   @Column("simple-array")
   services!: string[];
 
@@ -41,4 +44,26 @@ export class Deal {
 
   @Column({ type: "int", nullable: true })
   agencyId!: number | null;
+
+  // Client fields
+  @Column({ type: "varchar", nullable: true, default: "" })
+  contact!: string;
+
+  @Column({ type: "varchar", nullable: true, default: "" })
+  email!: string;
+
+  @Column({ type: "varchar", nullable: true, default: "" })
+  website!: string;
+
+  @Column({ type: "varchar", nullable: true, default: "" })
+  rep!: string;
+
+  @Column({ default: false })
+  stripePaymentDone!: boolean;
+
+  @Column({ default: false })
+  onboardingFormFilled!: boolean;
+
+  @Column({ default: false })
+  agreementSigned!: boolean;
 }

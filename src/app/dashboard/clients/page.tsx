@@ -476,7 +476,7 @@ export default function ClientsPage() {
     return (
       <>
         <Topbar title="Clients & Services">
-          {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>}
+          {/* Clients are created through deals — edit via pencil icon */}
         </Topbar>
         <PageLoader />
       </>
@@ -486,7 +486,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen">
       <Topbar title="Clients & Services">
-        {canEdit && <Button onClick={() => setModalOpen(true)}>+ Add Client</Button>}
+        {/* Clients are created through deals — edit via pencil icon */}
       </Topbar>
 
       <div className="p-4 md:p-6">
@@ -781,14 +781,14 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* =================== ADD CLIENT MODAL =================== */}
+      {/* =================== EDIT CLIENT MODAL =================== */}
       <Modal
-        open={modalOpen}
+        open={modalOpen && !!editTarget}
         onClose={() => {
           setModalOpen(false);
           resetAddForm();
         }}
-        title={editTarget ? "Edit Client" : "Add Client"}
+        title="Edit Client"
         actions={
           <>
             <Button
@@ -800,7 +800,7 @@ export default function ClientsPage() {
             >
               Cancel
             </Button>
-            <Button loading={saving} onClick={handleSubmitClient}>{editTarget ? "Save Changes" : "Add Client"}</Button>
+            <Button loading={saving} onClick={handleSubmitClient}>Save Changes</Button>
           </>
         }
       >

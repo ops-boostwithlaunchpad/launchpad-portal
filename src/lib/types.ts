@@ -32,6 +32,7 @@ export interface Deal {
   client: string;
   industry: string;
   agent: string;
+  agency: string;
   services: string[];
   mrr: number;
   stage: "Prospect" | "Proposal" | "Negotiation" | "Won" | "Lost";
@@ -40,6 +41,13 @@ export interface Deal {
   rejectionReason: string | null;
   submittedBy: string | null;
   agencyId: number | null;
+  contact: string;
+  email: string;
+  website: string;
+  rep: string;
+  stripePaymentDone: boolean;
+  onboardingFormFilled: boolean;
+  agreementSigned: boolean;
 }
 
 export interface Agency {
