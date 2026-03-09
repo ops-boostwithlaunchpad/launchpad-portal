@@ -117,6 +117,7 @@ export default function AgenciesPage() {
   const grandMRR = enriched.reduce((s, a) => s + a.totalMRR, 0);
   const totalAgentCount = enriched.reduce((s, a) => s + a.agentCount, 0);
   const totalClientCount = enriched.reduce((s, a) => s + a.clientCount, 0);
+  const totalCommission = enriched.reduce((s, a) => s + a.agentList.reduce((as, ag) => as + ag.commissionAmt, 0), 0);
 
   function toggleExpand(id: number) {
     setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -205,8 +206,8 @@ export default function AgenciesPage() {
         <StatsRow>
           <StatCard value={String(agencies.length)} label="Agency Partners" />
           <StatCard value={`$${grandMRR.toLocaleString()}`} label="Total Agency MRR" valueColor="green" />
+          <StatCard value={`$${totalCommission.toLocaleString()}`} label="Total Commission" valueColor="yellow" />
           <StatCard value={String(totalAgentCount)} label="Total Agents" />
-          <StatCard value={String(totalClientCount)} label="Total Clients" />
         </StatsRow>
 
         <Card title="All Agencies" actions={<ViewToggle view={desktopView} onToggle={setDesktopView} />}>

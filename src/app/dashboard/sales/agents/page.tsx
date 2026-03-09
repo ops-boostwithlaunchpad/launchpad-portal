@@ -19,7 +19,7 @@ const PER_PAGE = 10;
 
 export default function AgentsPage() {
   const { user } = useAuth();
-  const canEdit = user ? ["admin", "subadmin", "sales"].includes(user.role) : false;
+  const canEdit = user ? ["admin", "subadmin", "sales", "agency"].includes(user.role) : false;
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agencyList, setAgencyList] = useState<Agency[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -111,7 +111,7 @@ export default function AgentsPage() {
   useEffect(() => { setPage(1); }, [search, filterAgency]);
 
   const totalMRR = enriched.reduce((s, a) => s + a.computedMRR, 0);
-  const avgCommission = agents.length > 0 ? Math.round(agents.reduce((s, a) => s + a.commission, 0) / agents.length) : 0;
+  const totalCommission = enriched.reduce((s, a) => s + a.commissionAmt, 0);
   const activeCount = agents.filter((a) => a.status === "Active").length;
 
   // Unique agency names for filter (includes "Solo")
@@ -124,13 +124,16 @@ export default function AgentsPage() {
   // Agent form handlers
   const [showPassword, setShowPassword] = useState(false);
 
-  function resetForm() { setName(""); setAgencyVal(""); setEmail(""); setPasswordVal(""); setCommission(""); setEditTarget(null); setAttempted(false); setShowPassword(false); }
+  const isAgencyUser = user?.role === "agency";
+  const userAgency = isAgencyUser ? agencyList.find((a) => a.name === user?.name)?.agency || "" : "";
+
+  function resetForm() { setName(""); setAgencyVal(isAgencyUser ? userAgency : ""); setEmail(""); setPasswordVal(""); setCommission("10"); setEditTarget(null); setAttempted(false); setShowPassword(false); }
 
   function openEdit(a: Agent) { setEditTarget(a); setName(a.name); setAgencyVal(a.agency); setEmail(a.email || ""); setPasswordVal(""); setCommission(String(a.commission)); setModalOpen(true); }
 
   async function handleSubmit() {
     setAttempted(true);
-    if (!name.trim() || !agencyVal || !email.trim()) return;
+    if (!name.trim() || (!isAgencyUser && !agencyVal) || !email.trim()) return;
     setSaving(true);
     try {
       if (editTarget) {
@@ -207,7 +210,7 @@ export default function AgentsPage() {
         <StatsRow>
           <StatCard value={String(agents.length)} label="Total Agents" />
           <StatCard value={`$${totalMRR.toLocaleString()}`} label="Total MRR" valueColor="green" />
-          <StatCard value={`${avgCommission}%`} label="Avg Commission" />
+          <StatCard value={`$${totalCommission.toLocaleString()}`} label="Total Commission" valueColor="yellow" />
           <StatCard value={String(activeCount)} label="Active Agents" />
         </StatsRow>
 
@@ -354,13 +357,19 @@ export default function AgentsPage() {
         actions={<><Button variant="ghost" onClick={() => { resetForm(); setModalOpen(false); }}>Cancel</Button><Button loading={saving} onClick={handleSubmit}>{editTarget ? "Save Changes" : "Add Agent"}</Button></>}>
         <FormRow>
           <FormGroup label="Agent Name" required><Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} error={attempted && !name.trim()} /></FormGroup>
-          <FormGroup label="Agency" required>
-            <Select value={agencyVal} onChange={(e) => setAgencyVal(e.target.value)} error={attempted && !agencyVal}>
-              <option value="">Select agency...</option>
-              <option value="Solo">Solo (No Agency)</option>
-              {agencyList.map((ag) => <option key={ag.id} value={ag.agency}>{ag.agency}</option>)}
-            </Select>
-          </FormGroup>
+          {isAgencyUser ? (
+            <FormGroup label="Agency">
+              <Input value={userAgency || "Your Agency"} disabled />
+            </FormGroup>
+          ) : (
+            <FormGroup label="Agency" required>
+              <Select value={agencyVal} onChange={(e) => setAgencyVal(e.target.value)} error={attempted && !agencyVal}>
+                <option value="">Select agency...</option>
+                <option value="Solo">Solo (No Agency)</option>
+                {agencyList.map((ag) => <option key={ag.id} value={ag.agency}>{ag.agency}</option>)}
+              </Select>
+            </FormGroup>
+          )}
         </FormRow>
         <FormRow>
           <FormGroup label="Email" required><Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} error={attempted && !email.trim()} /></FormGroup>
@@ -373,9 +382,11 @@ export default function AgentsPage() {
             </div>
           </FormGroup>
         </FormRow>
-        <FormRow>
-          <FormGroup label="Commission %"><Input type="number" placeholder="e.g. 10" value={commission} onChange={(e) => setCommission(e.target.value)} /></FormGroup>
-        </FormRow>
+        {!isAgencyUser && (
+          <FormRow>
+            <FormGroup label="Commission %"><Input type="number" placeholder="e.g. 10" value={commission} onChange={(e) => setCommission(e.target.value)} /></FormGroup>
+          </FormRow>
+        )}
       </Modal>
 
       {/* Assign Client */}

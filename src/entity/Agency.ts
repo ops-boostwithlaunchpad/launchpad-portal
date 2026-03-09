@@ -26,7 +26,7 @@ export class Agency {
   @Column({ type: "int" })
   mrr!: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", default: 10 })
   commission!: number;
 
   @Column()

@@ -18,12 +18,15 @@ export default function MyTasksPage() {
   const [activeTab, setActiveTab] = useState("In Queue");
   const [updating, setUpdating] = useState<number | null>(null);
   const [savingProgress, setSavingProgress] = useState<number | null>(null);
+  const [savedProgress, setSavedProgress] = useState<Record<number, number>>({});
 
   const fetchTasks = useCallback(async () => {
     if (!user) return;
     const res = await fetch(`/api/tasks?assignedTo=${user.id}`);
     const data = await res.json();
-    setTasks(Array.isArray(data) ? data : []);
+    const list = Array.isArray(data) ? data : [];
+    setTasks(list);
+    setSavedProgress(Object.fromEntries(list.map((t: Task) => [t.id, t.progress ?? 0])));
     setLoading(false);
   }, [user]);
 
@@ -71,6 +74,9 @@ export default function MyTasksPage() {
       if (!res.ok) {
         const data = await res.json();
         showToast("Save Failed", data.error || "Failed to update progress", "error");
+      } else {
+        setSavedProgress((prev) => ({ ...prev, [taskId]: value }));
+        showToast("Progress Saved", `Progress updated to ${value}%`, "success");
       }
     } catch {
       showToast("Error", "Something went wrong while saving progress", "error");
@@ -197,7 +203,9 @@ export default function MyTasksPage() {
                       }}
                       disabled={savingProgress === task.id}
                       className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md"
-                      style={{ background: `linear-gradient(to right, #f59e0b, #6366f1, #10b981 ${Math.max(task.progress ?? 0, 5)}%, #e5e7eb ${Math.max(task.progress ?? 0, 5)}%)` }}
+                      style={{ background: (task.progress ?? 0) > 0
+                        ? `linear-gradient(to right, #f59e0b 0%, #6366f1 ${(task.progress ?? 0) / 2}%, #10b981 ${task.progress ?? 0}%, #e5e7eb ${task.progress ?? 0}%)`
+                        : "#e5e7eb" }}
                     />
                     <div className="flex justify-between text-[9px] text-gray-400 mt-0.5">
                       <span>0%</span>
@@ -240,10 +248,9 @@ export default function MyTasksPage() {
                 {activeTab === "In Progress" && (task.progress ?? 0) < 100 && (
                   <Button
                     size="sm"
-                    variant="ghost"
                     onClick={() => updateProgress(task.id, task.progress ?? 0)}
-                    disabled={savingProgress === task.id}
-                    className="flex gap-1 items-center"
+                    disabled={savingProgress === task.id || (task.progress ?? 0) === (savedProgress[task.id] ?? 0)}
+                    className="flex gap-1 items-center !bg-indigo-500 !text-white !border-indigo-500 hover:!bg-indigo-600 disabled:!opacity-40 disabled:!cursor-not-allowed"
                   >
                     {savingProgress === task.id ? "Updating..." : "Update Progress"}
                   </Button>

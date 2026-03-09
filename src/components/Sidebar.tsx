@@ -18,6 +18,7 @@ import {
   ChevronRight,
   XCircle,
   ShieldCheck,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
@@ -55,6 +56,7 @@ const navSections: NavSection[] = [
   {
     label: "Management",
     items: [
+      { name: "Approvals", href: "/dashboard/approvals", icon: ClipboardCheck, roles: ["admin", "subadmin"] },
       { name: "Employees", href: "/dashboard/employees", icon: Users, roles: ["admin", "subadmin"] },
       { name: "Sub Admins", href: "/dashboard/sub-admins", icon: ShieldCheck, roles: ["admin"] },
     ],

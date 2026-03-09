@@ -5,6 +5,7 @@ import { Agency } from "@/entity/Agency";
 import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { hashPassword } from "@/lib/password";
+import { getSupabase } from "@/lib/supabase";
 import { In } from "typeorm";
 
 // Helper: join agent records with user data and return combined shape
@@ -31,6 +32,7 @@ async function getAgentsWithUsers(db: Awaited<ReturnType<typeof getDB>>, where?:
       commission: a.commission,
       month: a.month,
       status: a.status,
+      approval: a.approval || "Approved",
     };
   });
 }
@@ -66,7 +68,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin", "subadmin", "sales");
+  const { user, error } = await requireRole("admin", "subadmin", "sales", "agency");
   if (error) return error;
   try {
     const db = await getDB();
@@ -85,19 +87,43 @@ export async function POST(request: NextRequest) {
       userRepo.create({ name, email, password: hashed, role: "agent" })
     );
 
+    // Agency-submitted agents start as Pending; admin/sales agents are auto-approved
+    const approval = user!.role === "agency" ? "Pending" : "Approved";
+
+    // If agency submits, force agency name to their own agency
+    let agentAgency = agency || "Solo";
+    if (user!.role === "agency") {
+      const agencyRecord = await db.getRepository(Agency).findOneBy({ userId: user!.id });
+      if (agencyRecord) agentAgency = agencyRecord.agency;
+    }
+
     // Create agent record linked to user
     const agentRepo = db.getRepository(AgentEntity);
     const newAgent = await agentRepo.save(
       agentRepo.create({
         userId: newUser.id,
-        agency: agency || "Solo",
+        agency: agentAgency,
         closed: closed || 0,
         mrr: mrr || 0,
-        commission: commission || 0,
+        commission: commission || 10,
         month: month || 0,
         status: status || "Active",
+        approval,
       })
     );
+
+    // Notify admin when agency adds an agent
+    if (user!.role === "agency") {
+      const sb = getSupabase();
+      if (sb) {
+        await sb.from("lp_notifications").insert({
+          user_id: 0,
+          title: "New Agent Submitted",
+          message: `${user!.name} added a new agent: ${name} — awaiting approval`,
+          type: "agent_pending",
+        });
+      }
+    }
 
     return NextResponse.json({
       id: newAgent.id,
@@ -109,6 +135,7 @@ export async function POST(request: NextRequest) {
       commission: newAgent.commission,
       month: newAgent.month,
       status: newAgent.status,
+      approval: newAgent.approval,
     }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -168,7 +195,55 @@ export async function PUT(request: NextRequest) {
       commission: agent.commission,
       month: agent.month,
       status: agent.status,
+      approval: agent.approval || "Approved",
     });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const { error } = await requireRole("admin", "subadmin");
+  if (error) return error;
+  try {
+    const db = await getDB();
+    const agentRepo = db.getRepository(AgentEntity);
+    const body = await request.json();
+    const { id, approval } = body;
+
+    if (!id || !approval) {
+      return NextResponse.json({ error: "Missing id or approval status" }, { status: 400 });
+    }
+
+    const agent = await agentRepo.findOneBy({ id });
+    if (!agent) {
+      return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+    }
+
+    agent.approval = approval;
+    await agentRepo.save(agent);
+
+    // Notify the agency that owns this agent
+    const sb = getSupabase();
+    if (sb) {
+      const agencyRecord = await db.getRepository(Agency).findOneBy({ agency: agent.agency });
+      if (agencyRecord?.userId) {
+        const isApproved = approval === "Approved";
+        const userRepo = db.getRepository(User);
+        const agentUser = agent.userId ? await userRepo.findOneBy({ id: agent.userId }) : null;
+        await sb.from("lp_notifications").insert({
+          user_id: agencyRecord.userId,
+          title: isApproved ? "Agent Approved" : "Agent Rejected",
+          message: isApproved
+            ? `Your agent "${agentUser?.name || "Unknown"}" has been approved`
+            : `Your agent "${agentUser?.name || "Unknown"}" was rejected`,
+          type: isApproved ? "agent_approved" : "agent_rejected",
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, approval: agent.approval });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -23,7 +23,7 @@ export class AgentEntity {
   @Column({ type: "int" })
   mrr!: number;
 
-  @Column({ type: "int" })
+  @Column({ type: "int", default: 10 })
   commission!: number;
 
   @Column({ type: "int" })
@@ -31,6 +31,9 @@ export class AgentEntity {
 
   @Column()
   status!: string;
+
+  @Column({ default: "Approved" })
+  approval!: string;
 
   @CreateDateColumn()
   createdAt!: Date;

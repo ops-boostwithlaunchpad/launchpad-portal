@@ -72,6 +72,7 @@ export interface Agent {
   commission: number;
   month: number;
   status: "Active" | "Onboarding" | "Inactive";
+  approval: "Pending" | "Approved" | "Rejected";
 }
 
 export interface Client {
