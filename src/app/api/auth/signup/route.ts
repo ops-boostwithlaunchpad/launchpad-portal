@@ -16,13 +16,32 @@ export async function POST(request: NextRequest) {
     const db = await getDB();
     const userRepo = db.getRepository(User);
 
-    // Check if already registered
+    // Check if already registered — allow password update
     const existingUser = await userRepo.findOneBy({ email });
     if (existingUser) {
-      return NextResponse.json(
-        { error: "This email is already registered. Please sign in instead." },
-        { status: 409 }
-      );
+      existingUser.password = await hashPassword(password);
+      await userRepo.save(existingUser);
+
+      const authUser: AuthUser = {
+        id: existingUser.id,
+        name: existingUser.name,
+        email: existingUser.email,
+        role: existingUser.role as AuthUser["role"],
+      };
+
+      const token = await createToken(authUser);
+      const redirectTo = existingUser.role === "client" ? "/dashboard/portal" : "/dashboard";
+
+      const response = NextResponse.json({ user: authUser, redirectTo });
+      response.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
+      return response;
     }
 
     // Check if email exists in lp_clients table (real onboarded clients)
