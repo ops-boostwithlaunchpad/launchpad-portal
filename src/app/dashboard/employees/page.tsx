@@ -13,13 +13,14 @@ import { Avatar } from "@/components/Avatar";
 import { StatusBadge, PrioBadge, ServiceBadge } from "@/components/Badge";
 import { DEPARTMENTS } from "@/lib/types";
 import type { Task, Client } from "@/lib/types";
-import { Pencil, Trash2, UserPlus } from "lucide-react";
+import { Pencil, Trash2, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Checkbox } from "@/components/FormGroup";
 
 interface EmployeeRow {
   id: number;
   name: string;
   email: string;
-  department: string;
+  department: string[];
   createdAt: string;
 }
 
@@ -51,7 +52,7 @@ export default function EmployeesPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [department, setDepartment] = useState("");
+  const [departments, setDepartments] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
 
   // Assign Task modal state
@@ -83,7 +84,7 @@ export default function EmployeesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const uniqueDepts = new Set(employees.map((e) => e.department));
+  const uniqueDepts = new Set(employees.flatMap((e) => e.department));
 
   const filteredEmployees = useMemo(() => {
     let list = employees;
@@ -93,7 +94,7 @@ export default function EmployeesPage() {
         (e) => e.name.toLowerCase().includes(q) || e.email.toLowerCase().includes(q)
       );
     }
-    if (filterDept) list = list.filter((e) => e.department === filterDept);
+    if (filterDept) list = list.filter((e) => e.department.includes(filterDept));
     return list;
   }, [employees, search, filterDept]);
 
@@ -107,7 +108,7 @@ export default function EmployeesPage() {
     setName("");
     setEmail("");
     setPassword("");
-    setDepartment("");
+    setDepartments([]);
     setEditTarget(null);
     setFormError("");
     setShowPassword(false);
@@ -119,14 +120,14 @@ export default function EmployeesPage() {
     setName(emp.name);
     setEmail(emp.email);
     setPassword("");
-    setDepartment(emp.department);
+    setDepartments(emp.department);
     setFormError("");
     setModalOpen(true);
   }
 
   async function handleSubmit() {
     setAttempted(true);
-    if (!name.trim() || !email.trim() || !department) {
+    if (!name.trim() || !email.trim() || departments.length === 0) {
       setFormError("Please fill in all required fields.");
       return;
     }
@@ -144,7 +145,7 @@ export default function EmployeesPage() {
           id: editTarget.id,
           name: name.trim(),
           email: email.trim(),
-          department,
+          department: departments,
         };
         if (password.trim()) body.password = password.trim();
 
@@ -168,7 +169,7 @@ export default function EmployeesPage() {
             name: name.trim(),
             email: email.trim(),
             password: password.trim(),
-            department,
+            department: departments,
           }),
         });
         if (!res.ok) {
@@ -271,13 +272,18 @@ export default function EmployeesPage() {
       key: "department",
       header: "Department",
       render: (emp: EmployeeRow) => (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-            deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"
-          }`}
-        >
-          {deptShortLabel[emp.department] || emp.department}
-        </span>
+        <div className="flex flex-wrap gap-1">
+          {emp.department.map((dept) => (
+            <span
+              key={dept}
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                deptBadgeColors[dept] || "bg-gray-50 text-gray-500 border-gray-200"
+              }`}
+            >
+              {deptShortLabel[dept] || dept}
+            </span>
+          ))}
+        </div>
       ),
     },
     {
@@ -382,9 +388,13 @@ export default function EmployeesPage() {
                       <div className="text-[10px] text-gray-500">{emp.email}</div>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${deptBadgeColors[emp.department] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
-                    {deptShortLabel[emp.department] || emp.department}
-                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {emp.department.map((dept) => (
+                      <span key={dept} className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${deptBadgeColors[dept] || "bg-gray-50 text-gray-500 border-gray-200"}`}>
+                        {deptShortLabel[dept] || dept}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-gray-500">
@@ -474,36 +484,39 @@ export default function EmployeesPage() {
             />
           </FormGroup>
         </FormRow>
-        <FormRow>
-          <FormGroup label={editTarget ? "New Password (leave blank to keep)" : "Password"}>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder={editTarget ? "Leave blank to keep current" : "Enter password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={attempted && !editTarget && !password.trim()}
+        <FormGroup label={editTarget ? "New Password (leave blank to keep)" : "Password"}>
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder={editTarget ? "Leave blank to keep current" : "Enter password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={attempted && !editTarget && !password.trim()}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+        </FormGroup>
+        <FormGroup label="Departments" required>
+          <div className={`flex flex-wrap gap-2 mt-1 p-2 rounded-lg border ${attempted && departments.length === 0 ? "border-red-300 bg-red-50/50" : "border-gray-200 bg-gray-50/50"}`}>
+            {DEPARTMENTS.map((d) => (
+              <Checkbox
+                key={d}
+                label={deptShortLabel[d] || d}
+                checked={departments.includes(d)}
+                onChange={() => setDepartments((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </FormGroup>
-          <FormGroup label="Department" required>
-            <Select value={department} onChange={(e) => setDepartment(e.target.value)} error={attempted && !department}>
-              <option value="">Select department...</option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </FormGroup>
-        </FormRow>
+            ))}
+          </div>
+          {attempted && departments.length === 0 && (
+            <p className="text-[10px] text-red-500 mt-1">Select at least one department</p>
+          )}
+        </FormGroup>
       </Modal>
 
       {/* Assign Task Modal */}

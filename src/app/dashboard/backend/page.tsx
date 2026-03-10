@@ -20,7 +20,7 @@ export default function BackendWorkBoardPage() {
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [logInput, setLogInput] = useState("");
-  const [employees, setEmployees] = useState<{ id: number; name: string; department: string | null }[]>([]);
+  const [employees, setEmployees] = useState<{ id: number; name: string; department: string[] | string | null }[]>([]);
   const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
@@ -264,7 +264,7 @@ export default function BackendWorkBoardPage() {
                 <option value="">Unassigned</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name}{emp.department ? ` — ${emp.department}` : ""}
+                    {emp.name}{Array.isArray(emp.department) ? (emp.department.length > 0 ? ` — ${emp.department.join(", ")}` : "") : emp.department ? ` — ${emp.department}` : ""}
                   </option>
                 ))}
               </Select>

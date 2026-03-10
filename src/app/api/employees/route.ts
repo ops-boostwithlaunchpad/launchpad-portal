@@ -4,6 +4,23 @@ import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { hashPassword } from "@/lib/password";
 
+// Parse department field — handles both legacy single string and JSON array
+function parseDepartments(dept: string | null): string[] {
+  if (!dept) return [];
+  try {
+    const parsed = JSON.parse(dept);
+    if (Array.isArray(parsed)) return parsed;
+    return [String(parsed)];
+  } catch {
+    return [dept];
+  }
+}
+
+function serializeDepartments(depts: string | string[]): string {
+  if (Array.isArray(depts)) return JSON.stringify(depts);
+  return JSON.stringify([depts]);
+}
+
 // GET all employees (admin only)
 export async function GET() {
   const { error } = await requireRole("admin", "subadmin", "sales", "backend");
@@ -16,7 +33,12 @@ export async function GET() {
       order: { createdAt: "DESC" },
       select: ["id", "name", "email", "department", "createdAt"],
     });
-    return NextResponse.json(employees);
+    // Return departments as array
+    const result = employees.map((e) => ({
+      ...e,
+      department: parseDepartments(e.department),
+    }));
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Failed to fetch employees:", err);
     return NextResponse.json([], { status: 200 });
@@ -45,10 +67,11 @@ export async function POST(request: NextRequest) {
     }
 
     const hashed = await hashPassword(password);
-    const user = repo.create({ name, email, password: hashed, role: "employee", department });
+    const serialized = serializeDepartments(department);
+    const user = repo.create({ name, email, password: hashed, role: "employee", department: serialized });
     const saved = await repo.save(user);
     const { password: _, ...result } = saved;
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json({ ...result, department: parseDepartments(saved.department) }, { status: 201 });
   } catch (err) {
     console.error("Failed to create employee:", err);
     return NextResponse.json({ error: "Failed to create employee" }, { status: 500 });
@@ -79,11 +102,11 @@ export async function PUT(request: NextRequest) {
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) user.password = await hashPassword(password);
-    if (department) user.department = department;
+    if (department) user.department = serializeDepartments(department);
 
     const updated = await repo.save(user);
     const { password: _, ...result } = updated;
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, department: parseDepartments(updated.department) });
   } catch (err) {
     console.error("Failed to update employee:", err);
     return NextResponse.json({ error: "Failed to update employee" }, { status: 500 });

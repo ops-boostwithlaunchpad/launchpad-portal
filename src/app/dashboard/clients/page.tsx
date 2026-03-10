@@ -28,6 +28,7 @@ import {
   SERVICE_OPTIONS,
   SVC_DESC,
   INDUSTRIES,
+  SERVICE_TO_DEPT,
 } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
 import { Pencil, Trash2, Check, Paperclip, X, ChevronDown, ChevronRight } from "lucide-react";
@@ -85,7 +86,7 @@ export default function ClientsPage() {
   }
 
   // Employees list for team assignment
-  const [employees, setEmployees] = useState<{ id: number; name: string; department: string | null }[]>([]);
+  const [employees, setEmployees] = useState<{ id: number; name: string; department: string[] }[]>([]);
 
   // Send to backend form state
   const [sendClientId, setSendClientId] = useState("");
@@ -362,7 +363,7 @@ export default function ClientsPage() {
         client: client.name,
         clientId: client.id,
         service: sendService,
-        team: emp?.department || sendTeam,
+        team: (emp?.department && emp.department.length > 0 ? emp.department[0] : sendTeam),
         priority: sendPriority as Task["priority"],
         due: sendDue,
         notes: sendNotes,
@@ -788,12 +789,29 @@ export default function ClientsPage() {
                   onChange={(e) => setSendTeam(e.target.value)}
                   error={sendAttempted && !sendTeam}
                 >
-                  <option value="">Select employee...</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.name}>
-                      {emp.name} — {emp.department || "No dept"}
-                    </option>
-                  ))}
+                  <option value="">{sendService ? "Select employee..." : "Select a service first..."}</option>
+                  {(() => {
+                    const matchDept = SERVICE_TO_DEPT[sendService] || "";
+                    const matched = matchDept ? employees.filter((emp) => emp.department.includes(matchDept)) : [];
+                    const others = matchDept ? employees.filter((emp) => !emp.department.includes(matchDept)) : employees;
+                    return (
+                      <>
+                        {matched.map((emp) => (
+                          <option key={emp.id} value={emp.name}>
+                            {emp.name} — {emp.department.join(", ")}
+                          </option>
+                        ))}
+                        {matched.length > 0 && others.length > 0 && (
+                          <option disabled>── Other employees ──</option>
+                        )}
+                        {others.map((emp) => (
+                          <option key={emp.id} value={emp.name}>
+                            {emp.name} — {emp.department.join(", ") || "No dept"}
+                          </option>
+                        ))}
+                      </>
+                    );
+                  })()}
                 </Select>
               </FormGroup>
 

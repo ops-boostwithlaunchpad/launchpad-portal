@@ -166,3 +166,13 @@ export const TEAMS = [
   "Automation Team (n8n)",
   "Technical Team",
 ];
+
+// Map service names to employee department names
+export const SERVICE_TO_DEPT: Record<string, string> = {
+  "Local SEO": "Local SEO",
+  "AI SEO": "AI SEO",
+  LSA: "Local Service Ads",
+  "Google Ads": "Google Ads",
+  "Meta Ads": "Meta Ads",
+  Automation: "Automation",
+};
