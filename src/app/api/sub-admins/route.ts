@@ -3,6 +3,7 @@ import { getDB } from "@/lib/db";
 import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { hashPassword } from "@/lib/password";
+import { logEvent } from "@/lib/logEvent";
 
 // GET all sub-admins (admin only)
 export async function GET() {
@@ -48,6 +49,17 @@ export async function POST(request: NextRequest) {
     const user = repo.create({ name, email, password: hashed, role: "subadmin", phone: phone || null });
     const saved = await repo.save(user);
     const { password: _, ...result } = saved;
+
+    logEvent({
+      event: "user_created",
+      category: "system",
+      message: `Sub-admin created: ${name}`,
+      userId: saved.id,
+      userName: name,
+      userRole: "subadmin",
+      metadata: { email },
+    });
+
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     console.error("Failed to create sub-admin:", err);

@@ -3,6 +3,7 @@ import { createToken, COOKIE_NAME, getDefaultRoute, type AuthUser } from "@/lib/
 import { getDB } from "@/lib/db";
 import { User } from "@/entity/User";
 import { verifyPassword } from "@/lib/password";
+import { logEvent } from "@/lib/logEvent";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -34,6 +35,16 @@ export async function POST(request: NextRequest) {
 
   const token = await createToken(authUser);
   const redirectTo = getDefaultRoute(authUser.role);
+
+  logEvent({
+    event: authUser.role === "client" ? "client_login" : "user_login",
+    category: "auth",
+    message: `${authUser.name} logged in`,
+    userId: authUser.id,
+    userName: authUser.name,
+    userRole: authUser.role,
+    metadata: { email: authUser.email },
+  });
 
   const response = NextResponse.json({ user: authUser, redirectTo });
   response.cookies.set(COOKIE_NAME, token, {

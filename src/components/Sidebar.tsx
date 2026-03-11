@@ -19,10 +19,36 @@ import {
   XCircle,
   ShieldCheck,
   ClipboardCheck,
+  ScrollText,
 } from "lucide-react";
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import type { Role } from "@/lib/types";
+
+function useRecentLogs(role: Role) {
+  const [hasRecent, setHasRecent] = useState(false);
+
+  useEffect(() => {
+    if (role !== "admin" && role !== "subadmin") return;
+
+    const check = async () => {
+      try {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString().split("T")[0];
+        const res = await fetch(`/api/logs?limit=1&from=${oneHourAgo}`);
+        if (res.ok) {
+          const data = await res.json();
+          setHasRecent(data.total > 0);
+        }
+      } catch { /* ignore */ }
+    };
+
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, [role]);
+
+  return hasRecent;
+}
 
 interface NavItem {
   name: string;
@@ -59,6 +85,7 @@ const navSections: NavSection[] = [
       { name: "Approvals", href: "/dashboard/approvals", icon: ClipboardCheck, roles: ["admin", "subadmin"] },
       { name: "Employees", href: "/dashboard/employees", icon: Users, roles: ["admin", "subadmin"] },
       { name: "Sub Admins", href: "/dashboard/sub-admins", icon: ShieldCheck, roles: ["admin"] },
+      { name: "Logs", href: "/dashboard/logs", icon: ScrollText, roles: ["admin", "subadmin"] },
     ],
   },
   {
@@ -92,6 +119,7 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   const role = user?.role || "admin";
+  const hasRecentLogs = useRecentLogs(role);
 
   // Filter sections/items based on role
   const visibleSections = navSections
@@ -183,6 +211,12 @@ export function Sidebar() {
                 >
                   <item.icon size={14} className={isActive ? "opacity-100" : "opacity-50"} />
                   {(!collapsed || isMobile) && item.name}
+                  {item.name === "Logs" && hasRecentLogs && !isActive && (
+                    <span className="relative ml-auto flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                    </span>
+                  )}
                 </Link>
               );
             })}

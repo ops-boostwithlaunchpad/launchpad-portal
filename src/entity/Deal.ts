@@ -69,6 +69,18 @@ export class Deal {
   @Column({ default: false })
   agreementSigned!: boolean;
 
+  @Column({ type: "varchar", nullable: true, default: "" })
+  companyName!: string;
+
+  @Column({ type: "varchar", nullable: true, default: "" })
+  location!: string;
+
+  @Column({ type: "text", nullable: true, default: "" })
+  painPoints!: string;
+
+  @Column({ type: "int", nullable: true, default: 0 })
+  setupFee!: number;
+
   @CreateDateColumn()
   createdAt!: Date;
 

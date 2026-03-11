@@ -5,6 +5,7 @@ import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { getCurrentUser } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
+import { logEvent } from "@/lib/logEvent";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireRole("admin", "subadmin", "sales", "backend", "employee", "client");
@@ -72,6 +73,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    logEvent({
+      event: "task_created",
+      category: "tasks",
+      message: `Task created: ${newTask.service} for ${newTask.client}`,
+      userId: null,
+      userName: null,
+      userRole: null,
+      metadata: { taskId: newTask.id, client: newTask.client, service: newTask.service, team: newTask.team, assignedTo: newTask.assignedToName || null },
+    });
+
+    if (newTask.assignedTo) {
+      logEvent({
+        event: "task_assigned",
+        category: "tasks",
+        message: `${newTask.assignedToName || "Employee"} assigned to ${newTask.service} for ${newTask.client}`,
+        userId: newTask.assignedTo,
+        userName: newTask.assignedToName,
+        userRole: "employee",
+        metadata: { taskId: newTask.id, client: newTask.client, service: newTask.service },
+      });
+    }
+
     return NextResponse.json(newTask, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -135,6 +158,30 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updated = await taskRepo.save(task);
+
+    if (statusChanged) {
+      logEvent({
+        event: "task_status_update",
+        category: "tasks",
+        message: `Task "${task.service}" for ${task.client} moved to ${status}`,
+        userId: null,
+        userName: null,
+        userRole: null,
+        metadata: { taskId: task.id, client: task.client, service: task.service, status },
+      });
+    }
+
+    if (wasAssigned && assignedTo) {
+      logEvent({
+        event: "task_assigned",
+        category: "tasks",
+        message: `${assignedToName || "Employee"} assigned to ${task.service} for ${task.client}`,
+        userId: assignedTo,
+        userName: assignedToName,
+        userRole: "employee",
+        metadata: { taskId: task.id, client: task.client, service: task.service },
+      });
+    }
 
     // Create notifications via Supabase (triggers Realtime) — skip if Supabase not configured
     const sb = getSupabase();

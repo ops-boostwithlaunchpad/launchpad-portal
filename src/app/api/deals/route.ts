@@ -1,85 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
 import { Deal } from "@/entity/Deal";
-import { Client } from "@/entity/Client";
-import { Task } from "@/entity/Task";
 import { Agency } from "@/entity/Agency";
 import { requireRole } from "@/lib/apiAuth";
 import { getSupabase } from "@/lib/supabase";
-import { createTaskForService } from "@/lib/taskCreation";
+import { logEvent } from "@/lib/logEvent";
+
+const N8N_WEBHOOK_URL = "https://n8n.launchpadautomation.com/webhook/portal-onboard";
 
 /**
- * When a deal is approved, create or update the corresponding client.
- * If client exists, append new services. If checklist complete, auto-send to backend.
+ * Send deal data to n8n for client onboarding (proposal generation, etc.)
  */
-async function syncDealToClient(db: Awaited<ReturnType<typeof getDB>>, deal: Deal) {
-  const clientRepo = db.getRepository(Client);
-  const taskRepo = db.getRepository(Task);
-
-  let client = await clientRepo.findOneBy({ email: deal.email });
-
-  if (client) {
-    // Append new services from this deal
-    const newServices = deal.services.filter((s) => !client!.services.includes(s));
-    if (newServices.length > 0) {
-      client.services = [...client.services, ...newServices];
-    }
-    // Update fields from deal
-    client.name = deal.client || client.name;
-    client.industry = deal.industry || client.industry;
-    client.contact = deal.contact || client.contact;
-    client.email = deal.email || client.email;
-    client.website = deal.website || client.website;
-    client.mrr = client.mrr + deal.mrr;
-    client.rep = deal.rep || client.rep;
-    // Update checklist (only set to true, never revert)
-    if (deal.stripePaymentDone) client.stripePaymentDone = true;
-    if (deal.onboardingFormFilled) client.onboardingFormFilled = true;
-    if (deal.agreementSigned) client.agreementSigned = true;
-
-    await clientRepo.save(client);
-
-    // Create tasks for newly added services if already sent to backend
-    if (client.sentToBackend && newServices.length > 0) {
-      for (const svc of newServices) {
-        await createTaskForService(db, client, svc, "");
-      }
-    }
-  } else {
-    // Create new client
-    client = await clientRepo.save({
-      name: deal.client,
-      industry: deal.industry,
-      contact: deal.contact || "",
-      email: deal.email || "",
-      services: deal.services,
-      mrr: deal.mrr,
-      start: new Date().toISOString().slice(0, 10),
-      rep: deal.rep || deal.agent || "Launchpad",
-      website: deal.website || "",
-      status: "Active",
-      stripePaymentDone: deal.stripePaymentDone,
-      onboardingFormFilled: deal.onboardingFormFilled,
-      agreementSigned: deal.agreementSigned,
-      sentToBackend: false,
+async function sendToN8n(deal: Deal) {
+  try {
+    await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: deal.client,
+        client_email: deal.email,
+        company_name: deal.companyName || deal.client,
+        industry: deal.industry,
+        current_website: deal.website,
+        location: deal.location || "",
+        pain_points: deal.painPoints || "",
+        services_interested: deal.services,
+        budget_mentioned: deal.mrr,
+        monthly_price: deal.mrr,
+        setup_fee: deal.setupFee || 0,
+      }),
     });
-  }
-
-  // Auto-send to backend if all checklist items checked
-  if (
-    client.stripePaymentDone &&
-    client.onboardingFormFilled &&
-    client.agreementSigned &&
-    !client.sentToBackend
-  ) {
-    for (const svc of client.services) {
-      const existing = await taskRepo.findOneBy({ clientId: client.id, service: svc });
-      if (!existing) {
-        await createTaskForService(db, client, svc, "onboarding");
-      }
-    }
-    client.sentToBackend = true;
-    await clientRepo.save(client);
+  } catch (err) {
+    console.error("Failed to send deal to n8n:", err);
   }
 }
 
@@ -133,9 +85,9 @@ export async function POST(request: NextRequest) {
 
     const newDeal = await dealRepo.save(data);
 
-    // Admin/sales deals are auto-approved — sync to client immediately
+    // Admin/sales deals are auto-approved — send to n8n immediately
     if (newDeal.approval === "Approved") {
-      await syncDealToClient(db, newDeal);
+      await sendToN8n(newDeal);
     }
 
     // Notify admin when agency submits a deal
@@ -150,6 +102,16 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+
+    logEvent({
+      event: "deal_created",
+      category: "deals",
+      message: `${user!.name} created deal: ${newDeal.client} ($${newDeal.mrr}/mo)`,
+      userId: user!.id,
+      userName: user!.name,
+      userRole: user!.role,
+      metadata: { dealId: newDeal.id, client: newDeal.client, mrr: newDeal.mrr, services: newDeal.services, approval: newDeal.approval },
+    });
 
     return NextResponse.json(newDeal, { status: 201 });
   } catch (err: unknown) {
@@ -181,9 +143,9 @@ export async function PATCH(request: NextRequest) {
 
     const updated = await dealRepo.save(deal);
 
-    // When approved, sync deal to client (create/update client + backend tasks)
+    // When approved, send to n8n for onboarding
     if (approval === "Approved") {
-      await syncDealToClient(db, updated);
+      await sendToN8n(updated);
     }
 
     // Notify the agency that submitted the deal
@@ -204,6 +166,18 @@ export async function PATCH(request: NextRequest) {
         }
       }
     }
+
+    logEvent({
+      event: approval === "Approved" ? "deal_approved" : "deal_rejected",
+      category: "deals",
+      message: approval === "Approved"
+        ? `Deal "${deal.client}" approved`
+        : `Deal "${deal.client}" rejected${rejectionReason ? `: ${rejectionReason}` : ""}`,
+      userId: null,
+      userName: null,
+      userRole: "admin",
+      metadata: { dealId: deal.id, client: deal.client, approval, rejectionReason: rejectionReason || null },
+    });
 
     return NextResponse.json(updated);
   } catch (err: unknown) {
@@ -231,11 +205,6 @@ export async function PUT(request: NextRequest) {
 
     await dealRepo.update(id, data);
     const updated = await dealRepo.findOneBy({ id });
-
-    // Sync changes to client when deal is approved (e.g. checklist edits)
-    if (updated && updated.approval === "Approved") {
-      await syncDealToClient(db, updated);
-    }
 
     // Notify admin when agency edits a deal
     if (user!.role === "agency") {

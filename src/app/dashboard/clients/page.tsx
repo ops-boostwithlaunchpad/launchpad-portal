@@ -66,6 +66,9 @@ export default function ClientsPage() {
   const [saving, setSaving] = useState(false);
   const [attempted, setAttempted] = useState(false);
 
+  // Onboarded / Pending sub-tab
+  const [rosterTab, setRosterTab] = useState<"Onboarded" | "Pending">("Onboarded");
+
   // Search, filter & pagination
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -124,6 +127,12 @@ export default function ClientsPage() {
 
   const filteredClients = useMemo(() => {
     let list = clientsList;
+    // Filter by onboarded/pending
+    if (rosterTab === "Onboarded") {
+      list = list.filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned);
+    } else {
+      list = list.filter((c) => !c.stripePaymentDone || !c.onboardingFormFilled || !c.agreementSigned);
+    }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -137,7 +146,7 @@ export default function ClientsPage() {
     if (filterStatus) list = list.filter((c) => c.status === filterStatus);
     if (filterService) list = list.filter((c) => c.services.includes(filterService));
     return list;
-  }, [clientsList, search, filterStatus, filterService]);
+  }, [clientsList, search, filterStatus, filterService, rosterTab]);
 
   const totalPages = Math.max(1, Math.ceil(filteredClients.length / PER_PAGE));
   const paginatedClients = filteredClients.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -449,7 +458,29 @@ export default function ClientsPage() {
               <StatCard value="97%" label="Satisfaction" />
             </StatsRow>
 
-            <Card title="Client Roster" actions={null}>
+            {/* Onboarded / Pending sub-tabs */}
+            <div className="flex items-center gap-1 mb-3">
+              {(["Onboarded", "Pending"] as const).map((tab) => {
+                const count = tab === "Onboarded"
+                  ? clientsList.filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned).length
+                  : clientsList.filter((c) => !c.stripePaymentDone || !c.onboardingFormFilled || !c.agreementSigned).length;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => { setRosterTab(tab); setPage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors cursor-pointer ${
+                      rosterTab === tab
+                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+                        : "text-gray-500 hover:bg-gray-100 border border-transparent"
+                    }`}
+                  >
+                    {tab} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            <Card title={rosterTab === "Onboarded" ? "Onboarded Clients" : "Pending Clients"} actions={null}>
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <SearchInput value={search} onChange={setSearch} placeholder="Search clients..." />
                 <select
@@ -752,14 +783,16 @@ export default function ClientsPage() {
                   error={sendAttempted && !sendClientId}
 >
                   <option value="">Select client...</option>
-                  {clientsList.map((c) => {
-                    const unassigned = unassignedCountMap[c.id] ?? 0;
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {c.name}{unassigned > 0 ? ` (${unassigned} unassigned)` : " (all assigned)"}
-                      </option>
-                    );
-                  })}
+                  {clientsList
+                    .filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned)
+                    .map((c) => {
+                      const unassigned = unassignedCountMap[c.id] ?? 0;
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {c.name}{unassigned > 0 ? ` (${unassigned} unassigned)` : " (all assigned)"}
+                        </option>
+                      );
+                    })}
                 </Select>
               </FormGroup>
 
@@ -992,25 +1025,6 @@ export default function ClientsPage() {
           />
         </FormGroup>
 
-        <FormGroup label="Onboarding Checklist">
-          <div className="flex flex-wrap gap-4 mt-1">
-            <Checkbox
-              label="Stripe Payment Done"
-              checked={formStripe}
-              onChange={() => setFormStripe(!formStripe)}
-            />
-            <Checkbox
-              label="Onboarding Form Filled"
-              checked={formOnboarding}
-              onChange={() => setFormOnboarding(!formOnboarding)}
-            />
-            <Checkbox
-              label="Agreement Signed"
-              checked={formAgreement}
-              onChange={() => setFormAgreement(!formAgreement)}
-            />
-          </div>
-        </FormGroup>
       </Modal>
 
       {/* =================== DELETE CONFIRM MODAL =================== */}

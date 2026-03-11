@@ -36,9 +36,10 @@ const emptyForm = {
   email: "",
   website: "",
   rep: "",
-  stripePaymentDone: false,
-  onboardingFormFilled: false,
-  agreementSigned: false,
+  companyName: "",
+  location: "",
+  painPoints: "",
+  setupFee: "",
 };
 
 export default function SalesMasterPage() {
@@ -171,9 +172,10 @@ export default function SalesMasterPage() {
       email: d.email || "",
       website: d.website || "",
       rep: d.rep || "",
-      stripePaymentDone: d.stripePaymentDone || false,
-      onboardingFormFilled: d.onboardingFormFilled || false,
-      agreementSigned: d.agreementSigned || false,
+      companyName: d.companyName || "",
+      location: d.location || "",
+      painPoints: d.painPoints || "",
+      setupFee: d.setupFee ? String(d.setupFee) : "",
     });
     setModalOpen(true);
   }
@@ -198,9 +200,10 @@ export default function SalesMasterPage() {
         email: form.email,
         website: form.website,
         rep: form.rep || "Launchpad",
-        stripePaymentDone: form.stripePaymentDone,
-        onboardingFormFilled: form.onboardingFormFilled,
-        agreementSigned: form.agreementSigned,
+        companyName: form.companyName,
+        location: form.location,
+        painPoints: form.painPoints,
+        setupFee: form.setupFee ? Number(form.setupFee) : 0,
       };
       const res = await fetch("/api/deals", {
         method: editTarget ? "PUT" : "POST",
@@ -525,6 +528,7 @@ export default function SalesMasterPage() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditTarget(null); setForm(emptyForm); setAttempted(false); }}
         title={editTarget ? "Edit Deal" : isAgency ? "Submit New Deal" : "Add New Deal"}
+        wide
         actions={
           <>
             <Button variant="ghost" onClick={() => { setModalOpen(false); setEditTarget(null); setForm(emptyForm); setAttempted(false); }}>
@@ -602,6 +606,33 @@ export default function SalesMasterPage() {
           </FormGroup>
         </FormRow>
 
+        <FormRow>
+          <FormGroup label="Company Name">
+            <Input
+              placeholder="e.g. Acme Inc."
+              value={form.companyName}
+              onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+            />
+          </FormGroup>
+          <FormGroup label="Location">
+            <Input
+              placeholder="e.g. Palm Beach Gardens, FL"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup label="Pain Points">
+            <Textarea
+              placeholder="e.g. Low website traffic, no leads..."
+              value={form.painPoints}
+              onChange={(e) => setForm({ ...form, painPoints: e.target.value })}
+            />
+          </FormGroup>
+        </FormRow>
+
         {/* Agency / Agent */}
         {isAgency ? (
           <FormGroup label="Agent" required>
@@ -659,7 +690,7 @@ export default function SalesMasterPage() {
 
         {/* Deal Details */}
         <FormRow>
-          <FormGroup label="MRR ($)" required>
+          <FormGroup label="Monthly Price ($)" required>
             <Input
               type="number"
               placeholder="e.g. 1200"
@@ -668,6 +699,17 @@ export default function SalesMasterPage() {
               error={attempted && !form.mrr}
             />
           </FormGroup>
+          <FormGroup label="Setup Fee ($)">
+            <Input
+              type="number"
+              placeholder="e.g. 500"
+              value={form.setupFee}
+              onChange={(e) => setForm({ ...form, setupFee: e.target.value })}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
           <FormGroup label="Stage">
             <Select
               value={form.stage}
@@ -682,36 +724,15 @@ export default function SalesMasterPage() {
               ))}
             </Select>
           </FormGroup>
+          <FormGroup label="Expected Close">
+            <Input
+              type="date"
+              value={form.close}
+              onChange={(e) => setForm({ ...form, close: e.target.value })}
+            />
+          </FormGroup>
         </FormRow>
 
-        <FormGroup label="Expected Close">
-          <Input
-            type="date"
-            value={form.close}
-            onChange={(e) => setForm({ ...form, close: e.target.value })}
-          />
-        </FormGroup>
-
-        {/* Onboarding Checklist */}
-        <FormGroup label="Onboarding Checklist">
-          <div className="flex flex-wrap gap-4 mt-1">
-            <Checkbox
-              label="Stripe Payment Done"
-              checked={form.stripePaymentDone}
-              onChange={() => setForm({ ...form, stripePaymentDone: !form.stripePaymentDone })}
-            />
-            <Checkbox
-              label="Onboarding Form Filled"
-              checked={form.onboardingFormFilled}
-              onChange={() => setForm({ ...form, onboardingFormFilled: !form.onboardingFormFilled })}
-            />
-            <Checkbox
-              label="Agreement Signed"
-              checked={form.agreementSigned}
-              onChange={() => setForm({ ...form, agreementSigned: !form.agreementSigned })}
-            />
-          </div>
-        </FormGroup>
       </Modal>
 
       {/* Reject Deal Modal */}

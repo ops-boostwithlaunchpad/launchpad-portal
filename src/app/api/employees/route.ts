@@ -3,6 +3,7 @@ import { getDB } from "@/lib/db";
 import { User } from "@/entity/User";
 import { requireRole } from "@/lib/apiAuth";
 import { hashPassword } from "@/lib/password";
+import { logEvent } from "@/lib/logEvent";
 
 // Parse department field — handles both legacy single string and JSON array
 function parseDepartments(dept: string | null): string[] {
@@ -71,6 +72,17 @@ export async function POST(request: NextRequest) {
     const user = repo.create({ name, email, password: hashed, role: "employee", department: serialized });
     const saved = await repo.save(user);
     const { password: _, ...result } = saved;
+
+    logEvent({
+      event: "user_created",
+      category: "employees",
+      message: `Employee created: ${name}`,
+      userId: saved.id,
+      userName: name,
+      userRole: "employee",
+      metadata: { email, department },
+    });
+
     return NextResponse.json({ ...result, department: parseDepartments(saved.department) }, { status: 201 });
   } catch (err) {
     console.error("Failed to create employee:", err);
@@ -104,8 +116,20 @@ export async function PUT(request: NextRequest) {
     if (password) user.password = await hashPassword(password);
     if (department) user.department = serializeDepartments(department);
 
+    const oldName = user.name;
     const updated = await repo.save(user);
     const { password: _, ...result } = updated;
+
+    logEvent({
+      event: "user_updated",
+      category: "employees",
+      message: `Employee updated: ${updated.name}`,
+      userId: updated.id,
+      userName: updated.name,
+      userRole: "employee",
+      metadata: { email: updated.email, previousName: oldName !== updated.name ? oldName : undefined },
+    });
+
     return NextResponse.json({ ...result, department: parseDepartments(updated.department) });
   } catch (err) {
     console.error("Failed to update employee:", err);
@@ -127,7 +151,23 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const db = await getDB();
-    await db.getRepository(User).delete({ id: Number(id), role: "employee" });
+    const repo = db.getRepository(User);
+    const user = await repo.findOneBy({ id: Number(id), role: "employee" });
+
+    if (user) {
+      await repo.delete({ id: Number(id), role: "employee" });
+
+      logEvent({
+        event: "user_deleted",
+        category: "employees",
+        message: `Employee deleted: ${user.name}`,
+        userId: user.id,
+        userName: user.name,
+        userRole: "employee",
+        metadata: { email: user.email },
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Failed to delete employee:", err);

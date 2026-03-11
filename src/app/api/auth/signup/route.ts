@@ -4,6 +4,7 @@ import { getDB } from "@/lib/db";
 import { Client } from "@/entity/Client";
 import { User } from "@/entity/User";
 import { hashPassword } from "@/lib/password";
+import { logEvent } from "@/lib/logEvent";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -67,6 +68,16 @@ export async function POST(request: NextRequest) {
     };
 
     const token = await createToken(authUser);
+
+    logEvent({
+      event: "user_created",
+      category: "auth",
+      message: `New client account created: ${saved.name}`,
+      userId: saved.id,
+      userName: saved.name,
+      userRole: "client",
+      metadata: { email },
+    });
 
     const response = NextResponse.json({ user: authUser, redirectTo: "/dashboard/portal" });
     response.cookies.set(COOKIE_NAME, token, {

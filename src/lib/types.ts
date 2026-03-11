@@ -48,6 +48,10 @@ export interface Deal {
   stripePaymentDone: boolean;
   onboardingFormFilled: boolean;
   agreementSigned: boolean;
+  companyName: string;
+  location: string;
+  painPoints: string;
+  setupFee: number;
 }
 
 export interface Agency {
