@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-export const runtime = "edge";
+export const runtime = "experimental-edge";
 
 export const config = {
   matcher: ["/dashboard/:path*"],
