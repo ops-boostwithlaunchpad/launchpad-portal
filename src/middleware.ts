@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { JWT_SECRET, COOKIE_NAME, getAllowedRoutes, getDefaultRoute } from "./lib/auth";
+import { COOKIE_NAME, getAllowedRoutes, getDefaultRoute } from "./lib/auth";
 import type { Role } from "./lib/types";
 
 export async function middleware(request: NextRequest) {
@@ -20,7 +20,8 @@ export async function middleware(request: NextRequest) {
 
   // Verify token
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+    const { payload } = await jwtVerify(token, secret);
     const role = payload.role as Role;
     const allowed = getAllowedRoutes(role);
 
@@ -34,12 +35,13 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch {
-    // Invalid token → clear cookie and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
-    return response;
+    // Don't clear cookie on transient errors (Edge Function cold starts, etc.)
+    // Just redirect to login — if the token is truly expired, login page handles it
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 }
+
+export const runtime = "edge";
 
 export const config = {
   matcher: ["/dashboard/:path*"],
