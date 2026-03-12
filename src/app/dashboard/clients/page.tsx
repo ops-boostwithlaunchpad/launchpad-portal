@@ -60,11 +60,16 @@ export default function ClientsPage() {
   const [formMrr, setFormMrr] = useState("");
   const [formRep, setFormRep] = useState("");
   const [formWebsite, setFormWebsite] = useState("");
+  const [formCompanyName, setFormCompanyName] = useState("");
+  const [formLocation, setFormLocation] = useState("");
+  const [formPainPoints, setFormPainPoints] = useState("");
+  const [formSetupFee, setFormSetupFee] = useState("");
   const [formStripe, setFormStripe] = useState(false);
   const [formOnboarding, setFormOnboarding] = useState(false);
   const [formAgreement, setFormAgreement] = useState(false);
   const [saving, setSaving] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const [formError, setFormError] = useState("");
 
   // Onboarded / Pending sub-tab
   const [rosterTab, setRosterTab] = useState<"Onboarded" | "Pending">("Onboarded");
@@ -186,7 +191,7 @@ export default function ClientsPage() {
       const assignedSvcs = new Set(
         tasksList.filter((t) => t.client === c.name && t.assignedTo).map((t) => t.service)
       );
-      map[c.id] = c.services.filter((s) => !assignedSvcs.has(s)).length;
+      map[c.id] = (c.services || []).filter((s) => !assignedSvcs.has(s)).length;
     }
     return map;
   }, [clientsList, tasksList]);
@@ -213,11 +218,16 @@ export default function ClientsPage() {
     setFormMrr("");
     setFormRep("");
     setFormWebsite("");
+    setFormCompanyName("");
+    setFormLocation("");
+    setFormPainPoints("");
+    setFormSetupFee("");
     setFormStripe(false);
     setFormOnboarding(false);
     setFormAgreement(false);
     setEditTarget(null);
     setAttempted(false);
+    setFormError("");
   }
 
   function openEdit(c: Client) {
@@ -238,7 +248,9 @@ export default function ClientsPage() {
 
   async function handleSubmitClient() {
     setAttempted(true);
-    if (!formName || !formEmail) return;
+    setFormError("");
+    if (!formName || !formEmail || !formIndustry || !formMrr) return;
+    if (!editTarget && formServices.length === 0) return;
     setSaving(true);
     try {
       if (editTarget) {
@@ -275,22 +287,24 @@ export default function ClientsPage() {
           );
         }
       } else {
-        const newClient: Client = {
-          id: Math.max(0, ...clientsList.map((c) => c.id)) + 1,
+        // Adding new client directly — mark as fully onboarded
+        const newClient = {
           name: formName,
           industry: formIndustry || "Other",
           contact: formContact,
           email: formEmail,
           services: formServices,
           mrr: Number(formMrr) || 0,
-          start: new Date().toISOString().slice(0, 10),
           rep: formRep || "Launchpad",
           website: formWebsite,
+          companyName: formCompanyName,
+          location: formLocation,
+          painPoints: formPainPoints,
+          setupFee: formSetupFee ? Number(formSetupFee) : 0,
           status: "Active",
-          stripePaymentDone: formStripe,
-          onboardingFormFilled: formOnboarding,
-          agreementSigned: formAgreement,
-          sentToBackend: false,
+          stripePaymentDone: true,
+          onboardingFormFilled: true,
+          agreementSigned: true,
         };
         try {
           const r = await fetch("/api/clients", {
@@ -299,9 +313,17 @@ export default function ClientsPage() {
             body: JSON.stringify(newClient),
           });
           const saved = await r.json();
-          setClientsList((prev) => [...prev, saved]);
-        } catch {
-          setClientsList((prev) => [...prev, newClient]);
+          if (r.ok) {
+            setClientsList((prev) => [...prev, { ...newClient, ...saved, services: saved.services || formServices, sentToBackend: false }]);
+          } else {
+            setFormError(saved.error || "Failed to add client");
+            setSaving(false);
+            return;
+          }
+        } catch (err) {
+          setFormError(err instanceof Error ? err.message : "Network error");
+          setSaving(false);
+          return;
         }
       }
 
@@ -437,9 +459,7 @@ export default function ClientsPage() {
   if (loading) {
     return (
       <>
-        <Topbar title="Clients & Services">
-          {/* Clients are created through deals — edit via pencil icon */}
-        </Topbar>
+        <Topbar title="Clients & Services" />
         <PageLoader />
       </>
     );
@@ -448,7 +468,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen">
       <Topbar title="Clients & Services">
-        {/* Clients are created through deals — edit via pencil icon */}
+        {canEdit && <Button onClick={() => { resetAddForm(); setModalOpen(true); }}>+ Add Client</Button>}
       </Topbar>
 
       <div className="p-4 md:p-6">
@@ -947,14 +967,15 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* =================== EDIT CLIENT MODAL =================== */}
+      {/* =================== ADD / EDIT CLIENT MODAL =================== */}
       <Modal
-        open={modalOpen && !!editTarget}
+        open={modalOpen}
         onClose={() => {
           setModalOpen(false);
           resetAddForm();
         }}
-        title="Edit Client"
+        title={editTarget ? "Edit Client" : "Add New Client"}
+        wide
         actions={
           <>
             <Button
@@ -966,25 +987,34 @@ export default function ClientsPage() {
             >
               Cancel
             </Button>
-            <Button loading={saving} onClick={handleSubmitClient}>Save Changes</Button>
+            <Button loading={saving} onClick={handleSubmitClient}>
+              {editTarget ? "Save Changes" : "Add Client"}
+            </Button>
           </>
         }
       >
+        {formError && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {formError}
+          </div>
+        )}
+        {/* Client Info */}
         <FormRow>
-          <FormGroup label="Business Name" required>
+          <FormGroup label="Client / Business Name" required>
             <Input
-              placeholder="Business name"
+              placeholder="e.g. Acme Corp"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               error={attempted && !formName}
             />
           </FormGroup>
-          <FormGroup label="Industry">
+          <FormGroup label="Industry" required>
             <Select
               value={formIndustry}
               onChange={(e) => setFormIndustry(e.target.value)}
+              error={attempted && !formIndustry}
             >
-              <option value="">Select industry...</option>
+              <option value="">Select industry</option>
               {INDUSTRIES.map((ind) => (
                 <option key={ind} value={ind}>
                   {ind}
@@ -1013,7 +1043,52 @@ export default function ClientsPage() {
           </FormGroup>
         </FormRow>
 
-        <FormGroup label="Services">
+        <FormRow>
+          <FormGroup label="Website">
+            <Input
+              placeholder="example.com"
+              value={formWebsite}
+              onChange={(e) => setFormWebsite(e.target.value)}
+            />
+          </FormGroup>
+          <FormGroup label="Account Rep">
+            <Input
+              placeholder="Launchpad"
+              value={formRep}
+              onChange={(e) => setFormRep(e.target.value)}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup label="Company Name">
+            <Input
+              placeholder="e.g. Acme Inc."
+              value={formCompanyName}
+              onChange={(e) => setFormCompanyName(e.target.value)}
+            />
+          </FormGroup>
+          <FormGroup label="Location">
+            <Input
+              placeholder="e.g. Palm Beach Gardens, FL"
+              value={formLocation}
+              onChange={(e) => setFormLocation(e.target.value)}
+            />
+          </FormGroup>
+        </FormRow>
+
+        <FormRow>
+          <FormGroup label="Pain Points">
+            <Textarea
+              placeholder="e.g. Low website traffic, no leads..."
+              value={formPainPoints}
+              onChange={(e) => setFormPainPoints(e.target.value)}
+            />
+          </FormGroup>
+        </FormRow>
+
+        {/* Services */}
+        <FormGroup label="Services" required={!editTarget}>
           <div className="flex flex-wrap gap-3 mt-1">
             {SERVICE_OPTIONS.map((svc) => (
               <Checkbox
@@ -1026,31 +1101,26 @@ export default function ClientsPage() {
           </div>
         </FormGroup>
 
+        {/* Pricing */}
         <FormRow>
-          <FormGroup label="MRR ($)">
+          <FormGroup label="Monthly Price ($)" required>
             <Input
               type="number"
-              placeholder="0"
+              placeholder="e.g. 1200"
               value={formMrr}
               onChange={(e) => setFormMrr(e.target.value)}
+              error={attempted && !formMrr}
             />
           </FormGroup>
-          <FormGroup label="Account Rep">
+          <FormGroup label="Setup Fee ($)">
             <Input
-              placeholder="Launchpad"
-              value={formRep}
-              onChange={(e) => setFormRep(e.target.value)}
+              type="number"
+              placeholder="e.g. 500"
+              value={formSetupFee}
+              onChange={(e) => setFormSetupFee(e.target.value)}
             />
           </FormGroup>
         </FormRow>
-
-        <FormGroup label="Website">
-          <Input
-            placeholder="example.com"
-            value={formWebsite}
-            onChange={(e) => setFormWebsite(e.target.value)}
-          />
-        </FormGroup>
 
       </Modal>
 

@@ -147,17 +147,30 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const services = normalizeServices(body.services);
 
+    const proposalId = `PROP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     const insertData: any = {
+      proposal_id: proposalId,
       client_name: body.name,
-      industry: body.industry,
-      client_phone: body.contact,
-      client_email: body.email,
-      services_interested: services,
+      industry: body.industry || null,
+      client_phone: body.contact || null,
+      client_email: body.email || null,
+      services_interested: services.length > 0 ? services : null,
       monthly_price: body.mrr || 0,
-      salesperson: body.rep,
-      website: body.website,
-      status: body.status || "Active",
+      salesperson: body.rep || null,
+      website: body.website || null,
+      status: (body.status || "active").toLowerCase(),
+      company_name: body.companyName || null,
+      location: body.location || null,
+      pain_points: body.painPoints || null,
+      setup_fee: body.setupFee || 0,
+      payment_status: body.stripePaymentDone ? "paid" : null,
+      onboarding_form_completed: body.onboardingFormFilled || false,
+      agreement_signed: body.agreementSigned || false,
+      onboarding_status: body.stripePaymentDone && body.onboardingFormFilled && body.agreementSigned ? "sent_to_backend" : null,
     };
+
+    console.log("Inserting client into Supabase:", JSON.stringify(insertData));
 
     const { data, error: sbError } = await sb
       .from("clients")
@@ -166,9 +179,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (sbError) {
+      console.error("Supabase insert error:", sbError);
       return NextResponse.json({ error: sbError.message }, { status: 500 });
     }
 
+    console.log("Client inserted successfully:", data);
     return NextResponse.json(mapRow(data), { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
