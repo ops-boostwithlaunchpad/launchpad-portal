@@ -1,49 +1,135 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
-import { Client } from "@/entity/Client";
 import { Deal } from "@/entity/Deal";
 import { AgentEntity } from "@/entity/AgentEntity";
 import { Agency } from "@/entity/Agency";
 import { User } from "@/entity/User";
 import { Task } from "@/entity/Task";
 import { requireRole } from "@/lib/apiAuth";
+import { getSupabase } from "@/lib/supabase";
 import { In } from "typeorm";
-import { autoSendToBackend, createTaskForService } from "@/lib/taskCreation";
+import { createTaskForService } from "@/lib/taskCreation";
+
+/** Map snake_case / lowercase service names to display names */
+const SERVICE_NAME_MAP: Record<string, string> = {
+  local_seo: "Local SEO",
+  "local seo": "Local SEO",
+  ai_seo: "AI SEO",
+  "ai seo": "AI SEO",
+  lsa: "LSA",
+  "local service ads": "LSA",
+  google_ads: "Google Ads",
+  "google ads": "Google Ads",
+  meta_ads: "Meta Ads",
+  "meta ads": "Meta Ads",
+  automation: "Automation",
+};
+
+function mapServiceName(s: string): string {
+  const trimmed = s.trim();
+  return SERVICE_NAME_MAP[trimmed.toLowerCase()] || trimmed;
+}
+
+/** Normalize services from various formats into a clean string array */
+function normalizeServices(services: string[] | string | undefined | null): string[] {
+  if (!services) return [];
+
+  let items: string[];
+
+  if (typeof services === "string") {
+    // Try JSON parse first (e.g. '["AI SEO","LSA"]')
+    try {
+      const parsed = JSON.parse(services);
+      if (Array.isArray(parsed)) { items = parsed; }
+      else { items = services.split(","); }
+    } catch {
+      // Plain comma-separated string like "ai_seo, local_seo, lsa"
+      items = services.split(",");
+    }
+  } else if (Array.isArray(services)) {
+    // Postgres array comes as a real array from Supabase
+    items = services.flatMap((s) => {
+      const str = String(s);
+      if (str.startsWith("[")) {
+        try { return JSON.parse(str); } catch { /* fall through */ }
+      }
+      return str.split(",");
+    });
+  } else {
+    return [];
+  }
+
+  return items
+    .map((s) => String(s).replace(/^\[?"?|"?\]?$/g, "").trim())
+    .filter(Boolean)
+    .map(mapServiceName);
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Map a Supabase clients row to the Client interface the frontend expects */
+function mapRow(row: any) {
+  return {
+    id: row.id,
+    name: row.client_name || "",
+    industry: row.industry || "",
+    contact: row.client_phone || "",
+    email: row.client_email || "",
+    services: normalizeServices(row.services_interested),
+    mrr: row.monthly_price || 0,
+    start: row.created_at || "",
+    rep: row.salesperson || "",
+    website: row.website || "",
+    status: row.status || "Active",
+    stripePaymentDone: row.payment_status === "paid",
+    onboardingFormFilled: row.onboarding_form_completed === true,
+    agreementSigned: row.agreement_signed === true,
+    sentToBackend: row.onboarding_status === "sent_to_backend",
+  };
+}
 
 export async function GET() {
   const { user, error } = await requireRole("admin", "subadmin", "sales", "backend", "employee", "client", "agent", "agency");
   if (error) return error;
+
+  const sb = getSupabase();
+  if (!sb) return NextResponse.json([]);
+
   try {
-    const db = await getDB();
-    const clientRepo = db.getRepository(Client);
-
     // Agency: only clients from deals handled by their agents
-    if (user!.role === "agency") {
-      const agency = await db.getRepository(Agency).findOneBy({ userId: user!.id });
-      if (!agency) return NextResponse.json([]);
-      const agents = await db.getRepository(AgentEntity).findBy({ agency: agency.agency });
-      const userIds = agents.map((a) => a.userId).filter(Boolean) as number[];
-      if (userIds.length === 0) return NextResponse.json([]);
-      const users = await db.getRepository(User).find({ where: userIds.map((id) => ({ id })), select: ["id", "name"] });
-      const agentNames = users.map((u) => u.name);
-      const deals = await db.getRepository(Deal).find({ where: agentNames.map((n) => ({ agent: n })) });
-      const clientNames = [...new Set(deals.map((d) => d.client))];
+    if (user!.role === "agency" || user!.role === "agent") {
+      const db = await getDB();
+
+      let clientNames: string[] = [];
+
+      if (user!.role === "agency") {
+        const agency = await db.getRepository(Agency).findOneBy({ userId: user!.id });
+        if (!agency) return NextResponse.json([]);
+        const agents = await db.getRepository(AgentEntity).findBy({ agency: agency.agency });
+        const userIds = agents.map((a) => a.userId).filter(Boolean) as number[];
+        if (userIds.length === 0) return NextResponse.json([]);
+        const users = await db.getRepository(User).find({ where: userIds.map((id) => ({ id })), select: ["id", "name"] });
+        const agentNames = users.map((u) => u.name);
+        const deals = await db.getRepository(Deal).find({ where: agentNames.map((n) => ({ agent: n })) });
+        clientNames = [...new Set(deals.map((d) => d.client))];
+      } else {
+        const deals = await db.getRepository(Deal).findBy({ agent: user!.name });
+        clientNames = [...new Set(deals.map((d) => d.client))];
+      }
+
       if (clientNames.length === 0) return NextResponse.json([]);
-      const clients = await clientRepo.find({ where: clientNames.map((n) => ({ name: n })) });
-      return NextResponse.json(clients);
+
+      const { data } = await sb
+        .from("clients")
+        .select("*")
+        .in("client_name", clientNames);
+
+      return NextResponse.json((data || []).map(mapRow));
     }
 
-    // Agent: only clients from their deals
-    if (user!.role === "agent") {
-      const deals = await db.getRepository(Deal).findBy({ agent: user!.name });
-      const clientNames = [...new Set(deals.map((d) => d.client))];
-      if (clientNames.length === 0) return NextResponse.json([]);
-      const clients = await clientRepo.find({ where: clientNames.map((n) => ({ name: n })) });
-      return NextResponse.json(clients);
-    }
-
-    const clients = await clientRepo.find();
-    return NextResponse.json(clients);
+    // All other roles: return all clients
+    const { data } = await sb.from("clients").select("*");
+    return NextResponse.json((data || []).map(mapRow));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -53,15 +139,37 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const { error } = await requireRole("admin", "subadmin", "sales");
   if (error) return error;
+
+  const sb = getSupabase();
+  if (!sb) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+
   try {
-    const db = await getDB();
-    const clientRepo = db.getRepository(Client);
     const body = await request.json();
-    const { id, ...data } = body;
-    const newClient = await clientRepo.save(data);
-    await autoSendToBackend(db, newClient);
-    const saved = await clientRepo.findOneBy({ id: newClient.id });
-    return NextResponse.json(saved, { status: 201 });
+    const services = normalizeServices(body.services);
+
+    const insertData: any = {
+      client_name: body.name,
+      industry: body.industry,
+      client_phone: body.contact,
+      client_email: body.email,
+      services_interested: services,
+      monthly_price: body.mrr || 0,
+      salesperson: body.rep,
+      website: body.website,
+      status: body.status || "Active",
+    };
+
+    const { data, error: sbError } = await sb
+      .from("clients")
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (sbError) {
+      return NextResponse.json({ error: sbError.message }, { status: 500 });
+    }
+
+    return NextResponse.json(mapRow(data), { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -71,57 +179,85 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const { error } = await requireRole("admin", "subadmin", "sales");
   if (error) return error;
+
+  const sb = getSupabase();
+  if (!sb) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+
   try {
-    const db = await getDB();
-    const clientRepo = db.getRepository(Client);
-    const taskRepo = db.getRepository(Task);
     const body = await request.json();
-    const { id, ...data } = body;
+    const { id, ...rest } = body;
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
-    const existing = await clientRepo.findOneBy({ id });
+    // Get existing client for comparison
+    const { data: existing } = await sb
+      .from("clients")
+      .select("*")
+      .eq("id", id)
+      .single();
+
     if (!existing) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const oldServices: string[] = existing.services || [];
-    const oldName = existing.name;
+    const services = rest.services ? normalizeServices(rest.services) : undefined;
 
-    await clientRepo.update(id, data);
-    const updated = await clientRepo.findOneBy({ id });
+    const updateData: any = {};
+    if (rest.name !== undefined) updateData.client_name = rest.name;
+    if (rest.industry !== undefined) updateData.industry = rest.industry;
+    if (rest.contact !== undefined) updateData.client_phone = rest.contact;
+    if (rest.email !== undefined) updateData.client_email = rest.email;
+    if (services !== undefined) updateData.services_interested = services;
+    if (rest.mrr !== undefined) updateData.monthly_price = rest.mrr;
+    if (rest.rep !== undefined) updateData.salesperson = rest.rep;
+    if (rest.website !== undefined) updateData.website = rest.website;
+    if (rest.status !== undefined) updateData.status = rest.status;
 
-    if (updated) {
-      const newServices: string[] = updated.services || [];
+    const { data: updated, error: sbError } = await sb
+      .from("clients")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (sbError) {
+      return NextResponse.json({ error: sbError.message }, { status: 500 });
+    }
+
+    // Handle task updates if services changed
+    if (services !== undefined) {
+      const db = await getDB();
+      const taskRepo = db.getRepository(Task);
+      const oldServices = normalizeServices(existing.services_interested);
+      const newServices = services;
 
       // Delete tasks for removed services
       const removedServices = oldServices.filter((s) => !newServices.includes(s));
       if (removedServices.length > 0) {
         await taskRepo.delete({
-          clientId: updated.id,
+          clientId: id,
           service: In(removedServices),
         });
       }
 
       // If client name changed, update all their tasks
-      if (oldName !== updated.name) {
-        await taskRepo.update({ clientId: updated.id }, { client: updated.name });
+      const oldName = existing.client_name;
+      const newName = rest.name || existing.client_name;
+      if (oldName !== newName) {
+        await taskRepo.update({ clientId: id }, { client: newName });
       }
 
       // Create tasks for newly added services (if already sent to backend)
-      if (updated.sentToBackend) {
+      if (existing.onboarding_status === "sent_to_backend") {
         const addedServices = newServices.filter((s) => !oldServices.includes(s));
         for (const svc of addedServices) {
-          await createTaskForService(db, updated, svc, "");
+          await createTaskForService(db, { id, name: newName }, svc, "");
         }
       }
-
-      await autoSendToBackend(db, updated);
     }
 
-    const final = await clientRepo.findOneBy({ id });
-    return NextResponse.json(final);
+    return NextResponse.json(mapRow(updated));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -131,10 +267,11 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const { error } = await requireRole("admin", "subadmin", "sales");
   if (error) return error;
+
+  const sb = getSupabase();
+  if (!sb) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+
   try {
-    const db = await getDB();
-    const clientRepo = db.getRepository(Client);
-    const taskRepo = db.getRepository(Task);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
@@ -142,9 +279,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete all tasks linked to this client
+    const db = await getDB();
+    const taskRepo = db.getRepository(Task);
     await taskRepo.delete({ clientId: Number(id) });
 
-    await clientRepo.delete(id);
+    // Delete from Supabase
+    const { error: sbError } = await sb
+      .from("clients")
+      .delete()
+      .eq("id", Number(id));
+
+    if (sbError) {
+      return NextResponse.json({ error: sbError.message }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

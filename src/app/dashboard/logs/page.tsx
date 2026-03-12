@@ -207,8 +207,12 @@ export default function LogsPage() {
     } catch { /* silent */ } finally { setLoading(false); setRefreshing(false); }
   }, []);
 
-  // Initial load
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  // Mark logs as seen + initial load
+  useEffect(() => {
+    localStorage.setItem("lp_logs_last_seen", new Date().toISOString());
+    window.dispatchEvent(new Event("lp_seen_logs"));
+    fetchLogs();
+  }, [fetchLogs]);
 
   // Re-fetch when category or dates change (instant)
   useEffect(() => {
@@ -265,23 +269,6 @@ export default function LogsPage() {
       <Topbar title="Activity Logs" />
 
       <div className="p-3 sm:p-6 space-y-5">
-        {/* Stats bar */}
-        <div className={`rounded-2xl ${catStyle.bg} border ${catStyle.border} px-5 py-4 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl ${catStyle.activeBg} flex items-center justify-center shadow-lg`}>
-              <Activity size={18} className="text-white" />
-            </div>
-            <div>
-              <div className={`text-2xl font-bold ${catStyle.text}`}>{total}</div>
-              <div className="text-[11px] text-gray-500 font-medium">{category === "all" ? "Total" : category.charAt(0).toUpperCase() + category.slice(1)} Logs</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${catStyle.dot} animate-pulse`} />
-            <span className="text-[11px] text-gray-500">Live · 30s refresh</span>
-          </div>
-        </div>
-
         {/* Category Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {CATEGORIES.map((cat) => {
@@ -356,7 +343,9 @@ export default function LogsPage() {
 
           {logs.map((log) => {
             const isExpanded = expandedId === log.id;
-            const hasMeta = log.metadata && Object.keys(log.metadata).length > 0;
+            const rawMeta = typeof log.metadata === "string" ? (() => { try { return JSON.parse(log.metadata); } catch { return null; } })() : log.metadata;
+            const meta = rawMeta && typeof rawMeta === "object" && !Array.isArray(rawMeta) ? rawMeta : null;
+            const hasMeta = meta && Object.keys(meta).length > 0;
             const cs = categoryStyle[log.category] || categoryStyle.system;
             const es = eventStyle[log.event] || eventStyle[log.category] || "bg-gray-500";
 
@@ -439,7 +428,7 @@ export default function LogsPage() {
                       <span className="text-[10px] text-gray-400 ml-auto">{formatFullDate(log.createdAt)}</span>
                     </div>
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {Object.entries(log.metadata).map(([key, value]) => (
+                      {Object.entries(meta as Record<string, unknown>).map(([key, value]) => (
                         <div key={key} className="flex items-start gap-3 bg-white/70 backdrop-blur rounded-lg px-3 py-2.5 border border-white">
                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider min-w-[70px] shrink-0 pt-0.5">
                             {key.replace(/([A-Z])/g, " $1").trim()}

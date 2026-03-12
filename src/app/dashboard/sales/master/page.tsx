@@ -13,7 +13,8 @@ import { PageLoader } from "@/components/Loader";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Deal, Agency, Agent, INDUSTRIES, SERVICE_OPTIONS } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
-import { Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Pencil, Trash2, Check, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 const STAGES: Deal["stage"][] = ["Prospect", "Proposal", "Negotiation", "Won", "Lost"];
 
@@ -44,6 +45,7 @@ const emptyForm = {
 
 export default function SalesMasterPage() {
   const { user } = useAuth();
+  const { showToast } = useNotifications();
   const isAdmin = user ? ["admin", "subadmin"].includes(user.role) : false;
   const canEdit = user ? ["admin", "subadmin", "sales"].includes(user.role) : false;
   const isAgency = user?.role === "agency";
@@ -73,6 +75,9 @@ export default function SalesMasterPage() {
   // Agencies & agents lists (for admin role)
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
+
+  // Client onboarding status map
+  const [onboardingMap, setOnboardingMap] = useState<Record<string, boolean>>({});
 
   // Filtered agents based on selected agency in the form
   const filteredAgents = form.agency
@@ -115,6 +120,16 @@ export default function SalesMasterPage() {
           .catch(() => {})
       );
     }
+
+    // Fetch onboarding status from Supabase clients table (keyed by email)
+    fetches.push(
+      fetch("/api/clients/onboarding-status")
+        .then((r) => r.json())
+        .then((data: Record<string, boolean>) => {
+          if (data && typeof data === "object") setOnboardingMap(data);
+        })
+        .catch(() => {})
+    );
 
     Promise.all(fetches)
       .catch(() => {})
@@ -216,6 +231,14 @@ export default function SalesMasterPage() {
           setDeals((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
         } else {
           setDeals((prev) => [...prev, saved]);
+          // Non-agency deals are auto-approved → n8n onboarding runs
+          if (!isAgency) {
+            showToast(
+              "Onboarding Started",
+              "The client will receive their proposal, agreement, and Stripe payment link via email within 5 minutes.",
+              "success"
+            );
+          }
         }
       }
       setModalOpen(false);
@@ -278,12 +301,21 @@ export default function SalesMasterPage() {
     {
       key: "client",
       header: "Client",
-      render: (d: Deal) => (
-        <div className="flex items-center gap-2">
-          <Avatar name={d.client} size="sm" />
-          <span className="font-medium text-gray-800">{d.client}</span>
-        </div>
-      ),
+      render: (d: Deal) => {
+        const hasClient = d.email && d.email in onboardingMap;
+        const isOnboarded = hasClient && onboardingMap[d.email];
+        return (
+          <div className="flex items-center gap-2">
+            <Avatar name={d.client} size="sm" />
+            <span className="font-medium text-gray-800">{d.client}</span>
+            {hasClient && (
+              isOnboarded
+                ? <span className="shrink-0" title="Fully onboarded"><CheckCircle2 size={14} className="text-emerald-500" /></span>
+                : <span className="shrink-0" title="Onboarding incomplete"><AlertCircle size={14} className="text-amber-500" /></span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "industry",
@@ -478,6 +510,11 @@ export default function SalesMasterPage() {
                   <div className="flex items-center gap-2">
                     <Avatar name={d.client} size="sm" />
                     <span className="font-medium text-[12.5px] text-gray-800">{d.client}</span>
+                    {d.email && d.email in onboardingMap && (
+                      onboardingMap[d.email]
+                        ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        : <AlertCircle size={13} className="text-amber-500 shrink-0" />
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     {(d.approval === "Pending" || d.approval === "Rejected") && (

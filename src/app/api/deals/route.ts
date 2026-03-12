@@ -2,9 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
 import { Deal } from "@/entity/Deal";
 import { Agency } from "@/entity/Agency";
+import { User } from "@/entity/User";
+import { In } from "typeorm";
 import { requireRole } from "@/lib/apiAuth";
 import { getSupabase } from "@/lib/supabase";
 import { logEvent } from "@/lib/logEvent";
+
+async function notifyAdmins(title: string, message: string, type: string) {
+  const sb = getSupabase();
+  if (!sb) return;
+  try {
+    const db = await getDB();
+    const admins = await db.getRepository(User).find({
+      where: { role: In(["admin", "subadmin"]) },
+      select: ["id"],
+    });
+    if (admins.length > 0) {
+      await sb.from("lp_notifications").insert(
+        admins.map((a) => ({ user_id: a.id, title, message, type }))
+      );
+    }
+  } catch { /* ignore */ }
+}
 
 const N8N_WEBHOOK_URL = "https://n8n.launchpadautomation.com/webhook/portal-onboard";
 
@@ -85,22 +104,18 @@ export async function POST(request: NextRequest) {
 
     const newDeal = await dealRepo.save(data);
 
-    // Admin/sales deals are auto-approved — send to n8n immediately
+    // Admin/sales deals are auto-approved — fire-and-forget n8n workflow
     if (newDeal.approval === "Approved") {
-      await sendToN8n(newDeal);
+      sendToN8n(newDeal);
     }
 
     // Notify admin when agency submits a deal
     if (user!.role === "agency") {
-      const sb = getSupabase();
-      if (sb) {
-        await sb.from("lp_notifications").insert({
-          user_id: 0,
-          title: "New Deal Submitted",
-          message: `${user!.name} submitted a new deal: ${data.client} ($${data.mrr}/mo)`,
-          type: "deal_pending",
-        });
-      }
+      await notifyAdmins(
+        "New Deal Submitted",
+        `${user!.name} submitted a new deal: ${data.client} ($${data.mrr}/mo)`,
+        "deal_pending"
+      );
     }
 
     logEvent({
@@ -143,9 +158,9 @@ export async function PATCH(request: NextRequest) {
 
     const updated = await dealRepo.save(deal);
 
-    // When approved, send to n8n for onboarding
+    // When approved, fire-and-forget n8n workflow
     if (approval === "Approved") {
-      await sendToN8n(updated);
+      sendToN8n(updated);
     }
 
     // Notify the agency that submitted the deal
@@ -208,15 +223,11 @@ export async function PUT(request: NextRequest) {
 
     // Notify admin when agency edits a deal
     if (user!.role === "agency") {
-      const sb = getSupabase();
-      if (sb) {
-        await sb.from("lp_notifications").insert({
-          user_id: 0,
-          title: "Deal Updated",
-          message: `${user!.name} edited deal: ${updated?.client} — awaiting re-approval`,
-          type: "deal_pending",
-        });
-      }
+      await notifyAdmins(
+        "Deal Updated",
+        `${user!.name} edited deal: ${updated?.client} — awaiting re-approval`,
+        "deal_pending"
+      );
     }
 
     return NextResponse.json(updated);

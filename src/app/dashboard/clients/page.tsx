@@ -31,7 +31,7 @@ import {
   SERVICE_TO_DEPT,
 } from "@/lib/types";
 import { useAuth } from "@/lib/AuthContext";
-import { Pencil, Trash2, Check, Paperclip, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, Check, Paperclip, X, ChevronDown, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react";
 
 const TABS = ["Client Roster", "Services Purchased", "Send to Backend"];
 
@@ -125,13 +125,26 @@ export default function ClientsPage() {
   const activeClients = clientsList.filter((c) => c.status === "Active");
   const totalMrr = clientsList.reduce((sum, c) => sum + c.mrr, 0);
 
+  // Get onboarding checklist values directly from client (fetched from Supabase)
+  function getChecklist(c: Client) {
+    return {
+      stripe: c.stripePaymentDone,
+      onboarding: c.onboardingFormFilled,
+      agreement: c.agreementSigned,
+    };
+  }
+
+  function isFullyOnboarded(c: Client) {
+    return c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned;
+  }
+
   const filteredClients = useMemo(() => {
     let list = clientsList;
-    // Filter by onboarded/pending
+    // Filter by onboarded/pending using Supabase clients table values
     if (rosterTab === "Onboarded") {
-      list = list.filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned);
+      list = list.filter((c) => isFullyOnboarded(c));
     } else {
-      list = list.filter((c) => !c.stripePaymentDone || !c.onboardingFormFilled || !c.agreementSigned);
+      list = list.filter((c) => !isFullyOnboarded(c));
     }
     if (search) {
       const q = search.toLowerCase();
@@ -462,8 +475,8 @@ export default function ClientsPage() {
             <div className="flex items-center gap-1 mb-3">
               {(["Onboarded", "Pending"] as const).map((tab) => {
                 const count = tab === "Onboarded"
-                  ? clientsList.filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned).length
-                  : clientsList.filter((c) => !c.stripePaymentDone || !c.onboardingFormFilled || !c.agreementSigned).length;
+                  ? clientsList.filter((c) => isFullyOnboarded(c)).length
+                  : clientsList.filter((c) => !isFullyOnboarded(c)).length;
                 return (
                   <button
                     key={tab}
@@ -526,7 +539,14 @@ export default function ClientsPage() {
                             {isExp ? <ChevronDown size={14} className="text-indigo-600 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 shrink-0" />}
                             <Avatar name={c.name} />
                             <div>
-                              <div className="font-medium text-[12.5px] text-gray-800">{c.name}</div>
+                              <div className="font-medium text-[12.5px] text-gray-800 flex items-center gap-1.5">
+                                {c.name}
+                                {rosterTab === "Pending" && (
+                                  isFullyOnboarded(c)
+                                    ? <span title="Fully onboarded"><CheckCircle2 size={14} className="text-emerald-500" /></span>
+                                    : <span title="Onboarding incomplete"><AlertCircle size={14} className="text-orange-400" /></span>
+                                )}
+                              </div>
                               <div className="text-[10px] text-gray-500">{c.website}</div>
                             </div>
                           </div>
@@ -552,11 +572,11 @@ export default function ClientsPage() {
                           </div>}
                         </div>
                         <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-2 ml-6">
-                          {[
-                            { label: "Stripe", done: c.stripePaymentDone },
-                            { label: "Onboarding", done: c.onboardingFormFilled },
-                            { label: "Agreement", done: c.agreementSigned },
-                          ].map((ch) => (
+                          {(() => { const cl = getChecklist(c); return [
+                            { label: "Stripe", done: cl.stripe },
+                            { label: "Onboarding", done: cl.onboarding },
+                            { label: "Agreement", done: cl.agreement },
+                          ]; })().map((ch) => (
                             <div key={ch.label} className={`flex items-center gap-1 text-[10px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}>
                               <div className={`w-3 h-3 rounded border flex items-center justify-center ${ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}>
                                 {ch.done && <Check size={8} className="text-white" />}
@@ -619,7 +639,14 @@ export default function ClientsPage() {
                               <div className="flex items-center gap-2">
                                 <Avatar name={c.name} />
                                 <div>
-                                  <div className="font-medium text-gray-900">{c.name}</div>
+                                  <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                                    {c.name}
+                                    {rosterTab === "Pending" && (
+                                      isFullyOnboarded(c)
+                                        ? <span title="Fully onboarded"><CheckCircle2 size={14} className="text-emerald-500" /></span>
+                                        : <span title="Onboarding incomplete"><AlertCircle size={14} className="text-orange-400" /></span>
+                                    )}
+                                  </div>
                                   <div className="text-[10px] text-gray-500">{c.website}</div>
                                 </div>
                               </div>
@@ -632,11 +659,11 @@ export default function ClientsPage() {
                             <td className="px-3 py-2.5"><StatusBadge status={c.status} /></td>
                             <td className="px-3 py-2.5">
                               <div className="space-y-1">
-                                {[
-                                  { label: "Stripe", done: c.stripePaymentDone },
-                                  { label: "Onboarding", done: c.onboardingFormFilled },
-                                  { label: "Agreement", done: c.agreementSigned },
-                                ].map((ch) => (
+                                {(() => { const cl = getChecklist(c); return [
+                                  { label: "Stripe", done: cl.stripe },
+                                  { label: "Onboarding", done: cl.onboarding },
+                                  { label: "Agreement", done: cl.agreement },
+                                ]; })().map((ch) => (
                                   <div key={ch.label} className={`flex items-center gap-1.5 text-[11px] ${ch.done ? "text-emerald-600" : "text-gray-400"}`}>
                                     <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${ch.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"}`}>
                                       {ch.done && <Check size={10} className="text-white" />}
@@ -784,7 +811,7 @@ export default function ClientsPage() {
 >
                   <option value="">Select client...</option>
                   {clientsList
-                    .filter((c) => c.stripePaymentDone && c.onboardingFormFilled && c.agreementSigned)
+                    .filter((c) => isFullyOnboarded(c))
                     .map((c) => {
                       const unassigned = unassignedCountMap[c.id] ?? 0;
                       return (

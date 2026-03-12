@@ -7,8 +7,10 @@ import { Button } from "@/components/Button";
 import { ServiceBadge, PrioBadge, StatusBadge } from "@/components/Badge";
 import { useAuth } from "@/lib/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useRealtimeMessages } from "@/hooks/useRealtimeChat";
 import type { Task } from "@/lib/types";
-import { Paperclip } from "lucide-react";
+import { Paperclip, MessageCircle } from "lucide-react";
+import { TaskChatDrawer } from "@/components/TaskChatDrawer";
 
 export default function MyTasksPage() {
   const { user, loading: authLoading } = useAuth();
@@ -19,6 +21,9 @@ export default function MyTasksPage() {
   const [updating, setUpdating] = useState<number | null>(null);
   const [savingProgress, setSavingProgress] = useState<number | null>(null);
   const [savedProgress, setSavedProgress] = useState<Record<number, number>>({});
+  const [chatTask, setChatTask] = useState<Task | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [unreadMap, setUnreadMap] = useState<Record<number, number>>({});
 
   const fetchTasks = useCallback(async () => {
     if (!user) return;
@@ -33,6 +38,25 @@ export default function MyTasksPage() {
   useEffect(() => {
     if (!authLoading && user) fetchTasks();
   }, [authLoading, user, fetchTasks]);
+
+  // Fetch per-task unread message counts
+  const fetchUnread = useCallback(async () => {
+    try {
+      const res = await fetch("/api/task-messages/unread");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.perTask) setUnreadMap(data.perTask);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!user || tasks.length === 0) return;
+    fetchUnread();
+  }, [user, tasks, fetchUnread]);
+
+  // Realtime: refetch unread counts when any message is inserted/updated
+  useRealtimeMessages("my-tasks", fetchUnread);
 
   async function updateStatus(taskId: number, newStatus: string) {
     setUpdating(taskId);
@@ -233,44 +257,68 @@ export default function MyTasksPage() {
                   </div>
                 )}
 
-                {/* Status transition buttons */}
-                {activeTab === "In Queue" && (
-                  <Button
-                    size="sm"
-                    onClick={() => updateStatus(task.id, "In Progress")}
-                    disabled={updating === task.id}
-                    className="flex gap-1 items-center"
-                  >
-                    {updating === task.id ? "Starting..." : "Start Task"}
-                  </Button>
-                )}
+                {/* Action buttons row */}
+                <div className="flex items-center gap-2">
+                  {/* Status transition buttons */}
+                  {activeTab === "In Queue" && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateStatus(task.id, "In Progress")}
+                      disabled={updating === task.id}
+                      className="flex gap-1 items-center"
+                    >
+                      {updating === task.id ? "Starting..." : "Start Task"}
+                    </Button>
+                  )}
 
-                {activeTab === "In Progress" && (task.progress ?? 0) < 100 && (
-                  <Button
-                    size="sm"
-                    onClick={() => updateProgress(task.id, task.progress ?? 0)}
-                    disabled={savingProgress === task.id || (task.progress ?? 0) === (savedProgress[task.id] ?? 0)}
-                    className="flex gap-1 items-center !bg-indigo-500 !text-white !border-indigo-500 hover:!bg-indigo-600 disabled:!opacity-40 disabled:!cursor-not-allowed"
-                  >
-                    {savingProgress === task.id ? "Updating..." : "Update Progress"}
-                  </Button>
-                )}
+                  {activeTab === "In Progress" && (task.progress ?? 0) < 100 && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateProgress(task.id, task.progress ?? 0)}
+                      disabled={savingProgress === task.id || (task.progress ?? 0) === (savedProgress[task.id] ?? 0)}
+                      className="flex gap-1 items-center !bg-indigo-500 !text-white !border-indigo-500 hover:!bg-indigo-600 disabled:!opacity-40 disabled:!cursor-not-allowed"
+                    >
+                      {savingProgress === task.id ? "Updating..." : "Update Progress"}
+                    </Button>
+                  )}
 
-                {activeTab === "In Progress" && (task.progress ?? 0) >= 100 && (
-                  <Button
-                    size="sm"
-                    onClick={() => updateStatus(task.id, "Review")}
-                    disabled={updating === task.id}
-                    className="flex gap-1 items-center"
+                  {activeTab === "In Progress" && (task.progress ?? 0) >= 100 && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateStatus(task.id, "Review")}
+                      disabled={updating === task.id}
+                      className="flex gap-1 items-center"
+                    >
+                      {updating === task.id ? "Submitting..." : "Submit for Review"}
+                    </Button>
+                  )}
+
+                  {/* Chat button */}
+                  <button
+                    onClick={() => { setChatTask(task); setChatOpen(true); setUnreadMap((prev) => ({ ...prev, [task.id]: 0 })); }}
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 transition-colors relative"
                   >
-                    {updating === task.id ? "Submitting..." : "Submit for Review"}
-                  </Button>
-                )}
+                    <MessageCircle size={12} />
+                    Chat
+                    {(unreadMap[task.id] || 0) > 0 && (
+                      <span className="ml-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold bg-orange-500 text-white">
+                        {unreadMap[task.id]}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Chat Drawer */}
+      <TaskChatDrawer
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        task={chatTask}
+      />
     </>
   );
 }

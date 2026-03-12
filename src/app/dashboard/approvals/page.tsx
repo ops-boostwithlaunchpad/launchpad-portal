@@ -30,6 +30,10 @@ export default function ApprovalsPage() {
   const [processingAgent, setProcessingAgent] = useState(false);
 
   useEffect(() => {
+    // Mark approvals as seen
+    localStorage.setItem("lp_approvals_last_seen", new Date().toISOString());
+    window.dispatchEvent(new Event("lp_seen_approvals"));
+
     Promise.all([
       fetch("/api/deals").then((r) => r.json()),
       fetch("/api/agents").then((r) => r.json()),
@@ -71,11 +75,15 @@ export default function ApprovalsPage() {
             : d
         )
       );
-      showToast(
-        dealAction.type === "approve" ? "Deal Approved" : "Deal Rejected",
-        dealAction.type === "approve" ? "The deal has been approved and synced to clients" : "The deal has been rejected",
-        dealAction.type === "approve" ? "success" : "error"
-      );
+      if (dealAction.type === "approve") {
+        showToast(
+          "Deal Approved — Onboarding Started",
+          "The client will receive their proposal, agreement, and Stripe payment link via email within 5 minutes.",
+          "success"
+        );
+      } else {
+        showToast("Deal Rejected", "The deal has been rejected", "error");
+      }
     } catch {
       showToast("Error", "Something went wrong", "error");
     }

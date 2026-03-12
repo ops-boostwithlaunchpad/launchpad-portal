@@ -20,34 +20,90 @@ import {
   ShieldCheck,
   ClipboardCheck,
   ScrollText,
+  MessagesSquare,
 } from "lucide-react";
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useRealtimeMessages } from "@/hooks/useRealtimeChat";
 import type { Role } from "@/lib/types";
 
-function useRecentLogs(role: Role) {
-  const [hasRecent, setHasRecent] = useState(false);
+function useUnseenIndicator(role: Role, key: string, checkFn: () => Promise<boolean>) {
+  const [hasUnseen, setHasUnseen] = useState(false);
 
   useEffect(() => {
     if (role !== "admin" && role !== "subadmin") return;
 
     const check = async () => {
       try {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString().split("T")[0];
-        const res = await fetch(`/api/logs?limit=1&from=${oneHourAgo}`);
-        if (res.ok) {
-          const data = await res.json();
-          setHasRecent(data.total > 0);
-        }
+        setHasUnseen(await checkFn());
       } catch { /* ignore */ }
     };
 
     check();
     const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
-  }, [role]);
 
-  return hasRecent;
+    // Listen for "mark as seen" events from the page
+    const onSeen = () => setHasUnseen(false);
+    window.addEventListener(`lp_seen_${key}`, onSeen);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(`lp_seen_${key}`, onSeen);
+    };
+  }, [role, key, checkFn]);
+
+  return hasUnseen;
+}
+
+function useUnreadChatCount(role: Role) {
+  const [count, setCount] = useState(0);
+
+  const fetchCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/task-messages/unread");
+      if (!res.ok) return;
+      const data = await res.json();
+      setCount(data.count || 0);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (role !== "admin" && role !== "subadmin" && role !== "employee") return;
+    fetchCount();
+    // Fallback polling in case Realtime is not enabled on the table
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [role, fetchCount]);
+
+  // Realtime: refetch instantly when any message is inserted/updated
+  useRealtimeMessages("sidebar-unread", fetchCount);
+
+  return count;
+}
+
+function useUnseenLogs(role: Role) {
+  const checkFn = useCallback(async () => {
+    const lastSeen = localStorage.getItem("lp_logs_last_seen");
+    if (!lastSeen) return true; // never visited = show pulse
+    const res = await fetch(`/api/logs?limit=1&from=${encodeURIComponent(lastSeen)}`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.total > 0;
+  }, []);
+
+  return useUnseenIndicator(role, "logs", checkFn);
+}
+
+function useUnseenApprovals(role: Role) {
+  const checkFn = useCallback(async () => {
+    const lastSeen = localStorage.getItem("lp_approvals_last_seen");
+    const res = await fetch("/api/approvals/unseen" + (lastSeen ? `?since=${encodeURIComponent(lastSeen)}` : ""));
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.count > 0;
+  }, []);
+
+  return useUnseenIndicator(role, "approvals", checkFn);
 }
 
 interface NavItem {
@@ -76,6 +132,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend"] },
       { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend"] },
+      { name: "Ongoing Tasks", href: "/dashboard/ongoing-tasks", icon: MessagesSquare, roles: ["admin", "subadmin"] },
       { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
   },
@@ -119,7 +176,9 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   const role = user?.role || "admin";
-  const hasRecentLogs = useRecentLogs(role);
+  const hasUnseenLogs = useUnseenLogs(role);
+  const hasUnseenApprovals = useUnseenApprovals(role);
+  const unreadChatCount = useUnreadChatCount(role);
 
   // Filter sections/items based on role
   const visibleSections = navSections
@@ -211,11 +270,25 @@ export function Sidebar() {
                 >
                   <item.icon size={14} className={isActive ? "opacity-100" : "opacity-50"} />
                   {(!collapsed || isMobile) && item.name}
-                  {item.name === "Logs" && hasRecentLogs && !isActive && (
+                  {item.name === "Logs" && hasUnseenLogs && !isActive && (
                     <span className="relative ml-auto flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
                     </span>
+                  )}
+                  {item.name === "Approvals" && hasUnseenApprovals && !isActive && (
+                    <span className="relative ml-auto flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                    </span>
+                  )}
+                  {(item.name === "Ongoing Tasks" || item.name === "My Tasks") && unreadChatCount > 0 && (item.name === "My Tasks" || !isActive) && (!collapsed || isMobile) && (
+                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold bg-orange-500 text-white">
+                      {unreadChatCount > 99 ? "99+" : unreadChatCount}
+                    </span>
+                  )}
+                  {(item.name === "Ongoing Tasks" || item.name === "My Tasks") && unreadChatCount > 0 && (item.name === "My Tasks" || !isActive) && collapsed && !isMobile && (
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orange-500" />
                   )}
                 </Link>
               );
