@@ -21,10 +21,12 @@ import {
   ClipboardCheck,
   ScrollText,
   MessagesSquare,
+  Headset,
 } from "lucide-react";
 import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRealtimeMessages } from "@/hooks/useRealtimeChat";
+import { useRealtimeClientMessages } from "@/hooks/useRealtimeClientChat";
 import type { Role } from "@/lib/types";
 
 function useUnseenIndicator(role: Role, key: string, checkFn: () => Promise<boolean>) {
@@ -81,6 +83,29 @@ function useUnreadChatCount(role: Role) {
   return count;
 }
 
+function useUnreadClientChatCount(role: Role) {
+  const [count, setCount] = useState(0);
+
+  const fetchCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/client-messages/unread");
+      if (!res.ok) return;
+      const data = await res.json();
+      setCount(data.count || 0);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (role !== "admin" && role !== "subadmin" && role !== "client") return;
+    fetchCount();
+  }, [role, fetchCount]);
+
+  // Realtime: refetch instantly when any client message is inserted/updated
+  useRealtimeClientMessages("sidebar-client-unread", fetchCount);
+
+  return count;
+}
+
 function useUnseenLogs(role: Role) {
   const checkFn = useCallback(async () => {
     const lastSeen = localStorage.getItem("lp_logs_last_seen");
@@ -133,6 +158,7 @@ const navSections: NavSection[] = [
       { name: "Clients & Services", href: "/dashboard/clients", icon: Briefcase, roles: ["admin", "subadmin", "sales", "backend"] },
       { name: "Backend Board", href: "/dashboard/backend", icon: Kanban, roles: ["admin", "subadmin", "backend"] },
       { name: "Ongoing Tasks", href: "/dashboard/ongoing-tasks", icon: MessagesSquare, roles: ["admin", "subadmin"] },
+      { name: "Client Messages", href: "/dashboard/client-chats", icon: Headset, roles: ["admin", "subadmin"] },
       { name: "My Tasks", href: "/dashboard/my-tasks", icon: ClipboardList, roles: ["employee"] },
     ],
   },
@@ -149,6 +175,7 @@ const navSections: NavSection[] = [
     label: "Client Portal",
     items: [
       { name: "Customer View", href: "/dashboard/portal", icon: LineChart, roles: ["admin", "subadmin", "client"] },
+      { name: "Contact Admin", href: "/dashboard/contact-admin", icon: Headset, roles: ["client"] },
       { name: "Cancel Services", href: "/dashboard/cancel", icon: XCircle, roles: ["client"] },
     ],
   },
@@ -179,6 +206,7 @@ export function Sidebar() {
   const hasUnseenLogs = useUnseenLogs(role);
   const hasUnseenApprovals = useUnseenApprovals(role);
   const unreadChatCount = useUnreadChatCount(role);
+  const unreadClientChatCount = useUnreadClientChatCount(role);
 
   // Filter sections/items based on role
   const visibleSections = navSections
@@ -289,6 +317,14 @@ export function Sidebar() {
                   )}
                   {(item.name === "Ongoing Tasks" || item.name === "My Tasks") && unreadChatCount > 0 && (item.name === "My Tasks" || !isActive) && collapsed && !isMobile && (
                     <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orange-500" />
+                  )}
+                  {(item.name === "Client Messages" || item.name === "Contact Admin") && unreadClientChatCount > 0 && !isActive && (!collapsed || isMobile) && (
+                    <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold bg-cyan-500 text-white">
+                      {unreadClientChatCount > 99 ? "99+" : unreadClientChatCount}
+                    </span>
+                  )}
+                  {(item.name === "Client Messages" || item.name === "Contact Admin") && unreadClientChatCount > 0 && !isActive && collapsed && !isMobile && (
+                    <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-cyan-500" />
                   )}
                 </Link>
               );

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createToken, COOKIE_NAME, type AuthUser } from "@/lib/auth";
 import { getDB } from "@/lib/db";
-import { Client } from "@/entity/Client";
 import { User } from "@/entity/User";
 import { hashPassword } from "@/lib/password";
 import { logEvent } from "@/lib/logEvent";
+import { getSupabase } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -45,9 +45,20 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    // Check if email exists in lp_clients table (real onboarded clients)
-    const clientRecord = await db.getRepository(Client).findOneBy({ email });
-    if (!clientRecord) {
+    // Check if email exists in Supabase clients table
+    const sb = getSupabase();
+    if (!sb) {
+      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    }
+
+    const { data: clientRecord, error: sbErr } = await sb
+      .from("clients")
+      .select("id, client_name, client_email")
+      .eq("client_email", email)
+      .limit(1)
+      .single();
+
+    if (sbErr || !clientRecord) {
       return NextResponse.json(
         { error: "This email is not in our client records. Please contact your account manager." },
         { status: 403 }
@@ -56,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Create user with client role
     const hashed = await hashPassword(password);
-    const newUser = userRepo.create({ name: clientRecord.name, email, password: hashed, role: "client" });
+    const newUser = userRepo.create({ name: clientRecord.client_name || email, email, password: hashed, role: "client" });
     const saved = await userRepo.save(newUser);
 
     // Create auth token

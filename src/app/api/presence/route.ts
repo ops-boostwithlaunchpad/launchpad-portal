@@ -6,11 +6,13 @@ import { getCurrentUser } from "@/lib/auth";
 export const presenceMap = new Map<number, number>();
 // userId → currently open task chat ID
 export const openTaskMap = new Map<number, number>();
+// userId → currently open client chat (clientUserId)
+export const openClientChatMap = new Map<number, number>();
 
 export const ONLINE_THRESHOLD = 30_000; // 30 seconds
 
 export async function POST(request: NextRequest) {
-  const { error } = await requireRole("admin", "subadmin", "employee");
+  const { error } = await requireRole("admin", "subadmin", "employee", "client");
   if (error) return error;
 
   const user = await getCurrentUser();
@@ -18,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { openTaskId } = body;
+    const { openTaskId, openClientChatId } = body;
 
     presenceMap.set(user.id, Date.now());
 
@@ -28,6 +30,12 @@ export async function POST(request: NextRequest) {
       openTaskMap.delete(user.id);
     }
 
+    if (openClientChatId) {
+      openClientChatMap.set(user.id, openClientChatId);
+    } else {
+      openClientChatMap.delete(user.id);
+    }
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: true });
@@ -35,7 +43,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const { error } = await requireRole("admin", "subadmin", "employee");
+  const { error } = await requireRole("admin", "subadmin", "employee", "client");
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
